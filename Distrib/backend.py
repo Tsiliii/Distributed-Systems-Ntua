@@ -38,6 +38,9 @@ class Node():
 	def get_successor(self):
 		return self.successor
 
+	def get_data(self, key):
+		return self.data[key]
+
 	def check_if_in_data(self, key):
 		return key in self.data
 
@@ -57,14 +60,16 @@ class Node():
 
 	def insert(self, key, value,):
 		if self.k == 1:
-			if self.get_id() != self.hash(key):
+			if self.get_id() <= self.hash(key) or (self.get_id() >= self.hash(key) and self.get_predecessor()[0] >= self.hash(key)):
 				print("Found insert for",self.hash(key),", passing it forward")
 				msg = [["", "", 4],[key,value]]
 				msg = pickle.dumps(msg, -1)
+				print(self.get_successor())
 				self.get_successor()[2].send(msg)
 				# demand insert in successor
 			else:
 				if self.check_if_in_data(key):
+					print(self.get_data(key))
 					self.update_data(key,value)
 					# maybe sth like
 					# return previous data?
@@ -80,7 +85,7 @@ class Node():
 
 	# use sha1 to compute id
 	def compute_id(self, ip_address, port):
-		return port%100
+		# return port%100
 		# assumes ip_address is a string and port is an int
 		digest = sha1((ip_address+':'+str(port)).encode('ascii')).hexdigest()
 		return int(digest, 16)

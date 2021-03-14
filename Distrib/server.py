@@ -131,9 +131,10 @@ def main_loop(k = 1):
 			elif str(value).lower().startswith("insert"):
 				temporary = str(value)[6:].split(',')
 				key = temporary[0].lstrip()
-				value = temporary[1].lstrip()
-				node.insert(key,value)
+				some_value = temporary[1].lstrip()
+				node.insert(key,some_value)
 			print(f"You entered: {value}")
+			print("hashkey was",node.hash(key))
 
 if __name__ == '__main__':
 	# print(f"Arguments count: {len(sys.argv)}")

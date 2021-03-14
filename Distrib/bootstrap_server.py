@@ -75,7 +75,10 @@ def main_loop():
 				elif code == 1:
 					[pred_ip, pred_port] = info
 					node.update_dht(pred_ip, pred_port, peer_id, code=1, peer_socket=notified_socket)
-
+				elif code == 4:
+					[key,value] = info
+					node.insert(key,value)
+					
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]
 		if input:

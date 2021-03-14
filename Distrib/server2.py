@@ -117,6 +117,9 @@ def main_loop():
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
 					node.update_dht(succ[0], succ[1], succ[2], code)
+				elif code == 4:
+					[key,value] = info
+					node.insert(key,value)
 
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]
@@ -132,10 +135,10 @@ def main_loop():
 			elif str(value).lower().startswith("insert"):
 				temporary = str(value)[6:].split(',')
 				key = temporary[0].lstrip()
-				value = temporary[1].lstrip()
-				node.insert(key,value)
+				some_value = temporary[1].lstrip()
+				node.insert(key,some_value)
 			print(f"You entered: {value}")
-			
+
 if __name__ == '__main__':
 	create_server_socket()
 	connect_to_dht()
