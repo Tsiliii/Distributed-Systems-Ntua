@@ -153,8 +153,7 @@ class Node():
 					succ = self.get_successor()
 					return
 			elif self.consistency == "linearizability":
-				succ = self.get_successor()			
-				if 
+				pass 	
 
 	def delete(self, key):
 			pred = self.get_predecessor()[0]
