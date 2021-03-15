@@ -109,7 +109,7 @@ def main_loop():
 				peer_socket, peer_address = node.get_sockets()[0].accept()
 				# wait for info on port
 				[[peer_id, _, code], pred] = receive(peer_socket)
-				print("just received a new connection from", peer_id)
+				print("just received a new connection from", peer_id, "with info", pred)
 				node.update_dht(pred[0], pred[1], peer_id, code, peer_socket)
 			else:
 				[[peer_id, count, code], info] = receive(notified_socket)
@@ -117,12 +117,18 @@ def main_loop():
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
 					node.update_dht(succ[0], succ[1], succ[2], code)
+				#insert code
 				elif code == 4:
 					[key,value] = info
 					node.insert(key,value)
+				#delete code
 				elif code == 5:
 					[key] = info
 					node.delete(key)
+				#insert replica code
+				elif code == 6:
+					[key, value, peer_ip, peer_port, peer_id, currentk] = info
+					node.replica_insert(key, value, peer_ip, peer_port, peer_id, currentk)
 
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]
@@ -130,11 +136,7 @@ def main_loop():
 			value = sys.stdin.readline().rstrip()
 			if str(value) == "depart":
 				node.depart()
-		input = select.select([sys.stdin], [], [], 0)[0]
-		if input:
-			value = sys.stdin.readline().rstrip()
-			if str(value) == "depart":
-				node.depart()
+				return
 			elif str(value).lower().startswith("insert"):
 				temporary = str(value)[6:].split(',')
 				if (len(temporary) > 1):

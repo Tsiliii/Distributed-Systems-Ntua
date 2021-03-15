@@ -10,8 +10,8 @@ ip = "127.0.0.1"
 port = 9914
 recv_length = 1024
 
-node = Node(ip, port, True)
-def create_server_socket():
+# node = Node(ip, port, True)
+def create_server_socket(node):
 	# create a socket that will be used by other nodes when they first connect
 	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	server_socket.bind((ip, port))
@@ -46,7 +46,7 @@ def receive(socket):
 			print('Reading error: '.format(str(e)))
 			sys.exit()
 
-def main_loop():
+def main_loop(node):
 	while True:
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
@@ -72,15 +72,18 @@ def main_loop():
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
 					node.update_dht(succ[0], succ[1], succ[2], code)
-				elif code == 1:
-					[pred_ip, pred_port] = info
-					node.update_dht(pred_ip, pred_port, peer_id, code=1, peer_socket=notified_socket)
+				#insert code
 				elif code == 4:
 					[key,value] = info
 					node.insert(key,value)
+				#delete code
 				elif code == 5:
 					[key] = info
 					node.delete(key)
+				#insert replica code
+				elif code == 6:
+					[key, value, peer_ip, peer_port, peer_id, currentk] = info
+					node.replica_insert(key, value, peer_ip, peer_port, peer_id, currentk)
 
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]
@@ -105,5 +108,12 @@ def main_loop():
 			print(f"You entered: {value}")
 
 if __name__ == '__main__':
-	create_server_socket()
-	main_loop()
+	node = Node(ip, port, True)
+	for i, arg in enumerate(sys.argv):
+		if arg == '--k' and len(sys.argv) > i + 1:
+			node.set_k(int(sys.argv[i+1]))
+		elif arg == '--cons' and len(sys.argv) > i + 1:
+			if sys.argv[i+1] in ['lazy','linearizability']:
+				node.set_consistency(sys.argv[i+1])
+	create_server_socket(node)
+	main_loop(node)

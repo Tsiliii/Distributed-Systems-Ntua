@@ -96,7 +96,7 @@ def receive(socket):
 			print('Reading error: '.format(str(e)))
 			sys.exit()
 
-def main_loop(k = 1):
+def main_loop():
 	while True:
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
@@ -117,13 +117,18 @@ def main_loop(k = 1):
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
 					node.update_dht(succ[0], succ[1], succ[2], code)
-				#insert_code
+				#insert code
 				elif code == 4:
 					[key,value] = info
 					node.insert(key,value)
+				#delete code
 				elif code == 5:
 					[key] = info
 					node.delete(key)
+				#insert replica code
+				elif code == 6:
+					[key, value, peer_ip, peer_port, peer_id, currentk] = info
+					node.replica_insert(key, value, peer_ip, peer_port, peer_id, currentk)
 
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]

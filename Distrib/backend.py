@@ -16,6 +16,7 @@ class Node():
 		self.sockets_to_be_closed = []
 		self.counter = 0
 		self.k = 1
+		self.consistency = 'lazy'
 
 	def get_id(self):
 		return self.id
@@ -37,6 +38,18 @@ class Node():
 
 	def get_successor(self):
 		return self.successor
+
+	def set_consistency(self, newconsistency):
+		self.consistency = newconsistency
+
+	def get_consistency(self):
+		return self.consistency
+		
+	def set_k(self, newk):
+		self.k = newk
+
+	def get_k(self):
+		return self.k
 
 	def get_data(self, key):
 		return self.data[key]
@@ -63,7 +76,6 @@ class Node():
 		return self.counter
 
 	def insert(self, key, value):
-		if self.k == 1:
 			pred = self.get_predecessor()[0]
 			me = self.get_id()
 			hashkey = self.hash(key)
@@ -72,18 +84,43 @@ class Node():
 				if self.check_if_in_data(key):
 					print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
 					self.update_data(key,value)
+					if self.k != 1:
+						msg = [[self.get_id(), self.get_counter(), 6],[key, value, self.get_ip_address(), self.get_port(), self.get_id(), self.k - 1]]
+						msg = pickle.dumps(msg, -1)
+						# print(self.get_successor())
+						self.get_successor()[2].send(msg)
 					return
 				else:
 					print("I,",self.get_id(),"just inserted data",key,"with hash id",self.hash(key))
 					self.insert_data(key,value)
+					if self.k != 1:
+						msg = [[self.get_id(), self.get_counter(), 6],[key, value, self.get_ip_address(), self.get_port(), self.get_id(), self.k - 1]]
+						msg = pickle.dumps(msg, -1)
+						# print(self.get_successor())
+						self.get_successor()[2].send(msg)
 					return
 			else:
 				print("Found insert for",self.hash(key),", passing it forward")
 				msg = [[self.get_id(), self.get_counter(), 4],[key,value]]
 				msg = pickle.dumps(msg, -1)
-				print(self.get_successor())
+				# print(self.get_successor())
 				self.get_successor()[2].send(msg)
 				return
+
+	def replica_insert(self,key,value,peer_ip,peer_port,peer_id,currentk):
+		if currentk != 0 and self.get_id() != peer_id:
+			if self.check_if_in_data(key):
+				print("I,",self.get_id(),"just updated replica",k ,"for key:",key,"with new value:",value,'and old value:',self.get_data(key))
+			else:
+				print("I,",self.get_id(),"just inserted replica",k ,"for key:", key, "with hash id", self.hash(key))
+			self.update_data(key,value)
+			msg = [[self.get_id(), self.get_counter(), 6],[key, value, peer_ip, peer_port, peer_id, currentk - 1]]
+			msg = pickle.dumps(msg, -1)
+			self.get_successor()[2].send(msg)
+		elif self.get_id() == peer_id and currentk != 0:
+			print("Finished the whole circle, network cardinality is smaller than k =",self.k)
+		return
+
 
 	def query(self, key, k):
 		return
