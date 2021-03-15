@@ -10,7 +10,7 @@ ip = "127.0.0.1"
 port = 9914
 recv_length = 1024
 
-# node = Node(ip, port, True)
+node = Node(ip, port, True)
 def create_server_socket(node):
 	# create a socket that will be used by other nodes when they first connect
 	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -70,8 +70,11 @@ def main_loop(node):
 				[[peer_id, count, code], info] = receive(notified_socket)
 				# check for new successor
 				if code == 0 or code == 2 or code == 3:
-					[_, succ] = info
+					[_, succ, _] = info
 					node.update_dht(succ[0], succ[1], succ[2], code)
+				elif code == 1:
+					[pred_ip, pred_port] = info
+					node.update_dht(pred_ip, pred_port, peer_id, code=1, peer_socket=notified_socket)
 				#insert code
 				elif code == 4:
 					[key,value] = info
@@ -91,26 +94,22 @@ def main_loop(node):
 			value = sys.stdin.readline().rstrip()
 			if str(value) == "depart":
 				node.depart()
-				return
 			elif str(value).lower().startswith("insert"):
 				temporary = str(value)[6:].split(',')
 				if (len(temporary) > 1):
 					key = temporary[0].strip()
 					some_value = temporary[1].strip()
 					node.insert(key,some_value)
-				# print("hashkey was",node.hash(key))
 			elif str(value).lower().startswith("delete"):
 				temporary = str(value)[6:]
 				key = temporary.strip()
 				some_value = temporary[1].strip()
 				node.delete(key)
-				# print("hashkey was",node.hash(key))
 			print(f"You entered: {value}")
 
 if __name__ == '__main__':
-	node = Node(ip, port, True)
 	for i, arg in enumerate(sys.argv):
-		if arg == '--k' and len(sys.argv) > i + 1:
+		if arg == '--k' and len(sys.argv) > i + 1 and sys.argv[i+1].isdigit():
 			node.set_k(int(sys.argv[i+1]))
 		elif arg == '--cons' and len(sys.argv) > i + 1:
 			if sys.argv[i+1] in ['lazy','linearizability']:
