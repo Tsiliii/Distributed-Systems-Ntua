@@ -60,8 +60,11 @@ class Node():
 
 	def insert(self, key, value):
 		if self.k == 1:
-			print(self.get_predecessor()[0],self.hash(key),self.get_id())
-			if (self.get_id() >= self.hash(key) and self.get_predecessor()[0] < self.hash(key) or (self.id() < self.get_predecessor()[0] and self.get_id() < self.hash(key) and self.predecessor()[0] < self.hash(key))):
+			pred = self.get_predecessor()[0]
+			me = self.get_id()
+			hashkey = self.hash(key)
+			print(pred,hashkey,me)
+			if ( me >= hashkey and pred < hashkey or (me < pred and ( me <= hashkey and pred < hashkey ) or (hashkey <= me and hashkey < pred) ) ):
 				if self.check_if_in_data(key):
 					print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
 					self.update_data(key,value)
