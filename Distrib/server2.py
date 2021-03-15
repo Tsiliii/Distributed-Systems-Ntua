@@ -120,6 +120,9 @@ def main_loop():
 				elif code == 4:
 					[key,value] = info
 					node.insert(key,value)
+				elif code == 5:
+					[key] = info
+					node.delete(key)
 
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]
@@ -134,10 +137,18 @@ def main_loop():
 				node.depart()
 			elif str(value).lower().startswith("insert"):
 				temporary = str(value)[6:].split(',')
-				key = temporary[0].lstrip()
-				some_value = temporary[1].lstrip()
-				node.insert(key,some_value)
-				print("hashkey was",node.hash(key))
+				if (len(temporary) > 1):
+					key = temporary[0].strip()
+					some_value = temporary[1].strip()
+					node.insert(key,some_value)
+
+				# print("hashkey was",node.hash(key))
+			elif str(value).lower().startswith("delete"):
+				temporary = str(value)[6:]
+				key = temporary.strip()
+				some_value = temporary[1].strip()
+				node.delete(key)
+				# print("hashkey was",node.hash(key))
 			print(f"You entered: {value}")
 
 if __name__ == '__main__':

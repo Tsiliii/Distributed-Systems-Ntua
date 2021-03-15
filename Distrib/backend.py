@@ -50,6 +50,10 @@ class Node():
 	def update_data(self, key, value):
 		self.data[key] = value
 
+	def delete_data(self, key):
+		if self.check_if_in_data(key):
+			del self.data[key]
+
 	def set_counter(self):
 		self.counter += 1
 
@@ -68,25 +72,42 @@ class Node():
 				if self.check_if_in_data(key):
 					print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
 					self.update_data(key,value)
-					# maybe sth like
-					# return previous data?
+					return
 				else:
 					print("I,",self.get_id(),"just inserted data",key,"with hash id",self.hash(key))
 					self.insert_data(key,value)
-					# return Ok?
+					return
 			else:
 				print("Found insert for",self.hash(key),", passing it forward")
-				msg = [["", "", 4],[key,value]]
+				msg = [[self.get_id(), self.get_counter(), 4],[key,value]]
 				msg = pickle.dumps(msg, -1)
 				print(self.get_successor())
 				self.get_successor()[2].send(msg)
-				# demand insert in successor
+				return
 
 	def query(self, key, k):
 		return
 
 	def delete(self, key):
-		return
+			pred = self.get_predecessor()[0]
+			me = self.get_id()
+			hashkey = self.hash(key)
+			print(pred,hashkey,me)
+			if ( me >= hashkey and pred < hashkey or (me < pred and ( me <= hashkey and pred < hashkey ) or (hashkey <= me and hashkey < pred) ) ):
+				if self.check_if_in_data(key):
+					print("I,",self.get_id(),"just deleted key:",key,"with value:",self.get_data(key))
+					self.delete_data(key)
+					return
+				else:
+					print("I,",self.get_id(),"tried to delete missing data with key",key)
+					return
+			else:
+				print("Found delete for",self.hash(key),", passing it forward")
+				msg = [[self.get_id(), self.get_counter(), 5],[key]]
+				msg = pickle.dumps(msg, -1)
+				print(self.get_successor())
+				self.get_successor()[2].send(msg)
+				return
 
 	# use sha1 to compute id
 	def compute_id(self, ip_address, port):
