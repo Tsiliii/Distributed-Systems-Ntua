@@ -137,6 +137,7 @@ def main_loop():
 				key = temporary[0].lstrip()
 				some_value = temporary[1].lstrip()
 				node.insert(key,some_value)
+				print("hashkey was",node.hash(key))
 			print(f"You entered: {value}")
 
 if __name__ == '__main__':

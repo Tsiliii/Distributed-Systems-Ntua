@@ -78,18 +78,20 @@ def main_loop():
 				elif code == 4:
 					[key,value] = info
 					node.insert(key,value)
-					
+
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]
 		if input:
 			value = sys.stdin.readline().rstrip()
 			if str(value) == "depart":
 				node.depart()
+				return
 			elif str(value).lower().startswith("insert"):
 				temporary = str(value)[6:].split(',')
 				key = temporary[0].lstrip()
-				value = temporary[1].lstrip()
-				node.insert(key,value)
+				some_value = temporary[1].lstrip()
+				node.insert(key,some_value)
+				print("hashkey was",node.hash(key))
 			print(f"You entered: {value}")
 
 if __name__ == '__main__':

@@ -58,24 +58,26 @@ class Node():
 		self.counter += 1
 		return self.counter
 
-	def insert(self, key, value,):
+	def insert(self, key, value):
 		if self.k == 1:
-			if self.get_id() <= self.hash(key) or (self.get_id() >= self.hash(key) and self.get_predecessor()[0] >= self.hash(key)):
+			print(self.get_predecessor()[0],self.hash(key),self.get_id())
+			if (self.get_id() >= self.hash(key) and self.get_predecessor()[0] < self.hash(key) or (self.id() < self.get_predecessor()[0] and self.get_id() < self.hash(key) and self.predecessor()[0] < self.hash(key))):
+				if self.check_if_in_data(key):
+					print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
+					self.update_data(key,value)
+					# maybe sth like
+					# return previous data?
+				else:
+					print("I,",self.get_id(),"just inserted data",key,"with hash id",self.hash(key))
+					self.insert_data(key,value)
+					# return Ok?
+			else:
 				print("Found insert for",self.hash(key),", passing it forward")
 				msg = [["", "", 4],[key,value]]
 				msg = pickle.dumps(msg, -1)
 				print(self.get_successor())
 				self.get_successor()[2].send(msg)
 				# demand insert in successor
-			else:
-				if self.check_if_in_data(key):
-					print(self.get_data(key))
-					self.update_data(key,value)
-					# maybe sth like
-					# return previous data?
-				else:
-					self.insert_data(key,value)
-					# return Ok?
 
 	def query(self, key, k):
 		return
@@ -222,7 +224,6 @@ class Node():
 		for socket in self.get_sockets():
 			self.remove_socket(socket)
 		print(f"sending message to {self.get_predecessor()[2]}")
-
 
 	def create_socket(self, ip_address, port):
 		print(f"creating socket for address {ip_address} and port {port}")
