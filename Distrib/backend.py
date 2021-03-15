@@ -44,7 +44,7 @@ class Node():
 
 	def get_consistency(self):
 		return self.consistency
-		
+
 	def set_k(self, newk):
 		self.k = newk
 
@@ -112,9 +112,9 @@ class Node():
 	def replica_insert(self,key,value,peer_ip,peer_port,peer_id,currentk):
 		if currentk != 0 and self.get_id() != peer_id:
 			if self.check_if_in_data(key):
-				print("I,",self.get_id(),"just updated replica",k ,"for key:",key,"with new value:",value,'and old value:',self.get_data(key))
+				print("I,",self.get_id(),"just updated replica",currentk ,"for key:",key,"with new value:",value,'and old value:',self.get_data(key))
 			else:
-				print("I,",self.get_id(),"just inserted replica",k ,"for key:", key, "with hash id", self.hash(key))
+				print("I,",self.get_id(),"just inserted replica",currentk ,"for key:", key, "with hash id", self.hash(key))
 			self.update_data(key,value)
 			msg = [[self.get_id(), self.get_counter(), 6],[key, value, peer_ip, peer_port, peer_id, currentk - 1]]
 			msg = pickle.dumps(msg, -1)
@@ -232,8 +232,15 @@ class Node():
 		#print("in_between_succ", x < successor_id and successor_id < id, successor_id < id and id < x, id < x and x < successor_id)
 		return (x < successor_id and successor_id < id) or (successor_id < id and id < x) or (id < x and x < successor_id)
 
+		# if self.is_bootstrap:
+		# 	print(self.in_between_pred(peer_id))
+		# 	print(code == 1)
+		# 	print(code == 3)
+		# 	print(code)
+
 	def update_dht(self, peer_ip_address, peer_port, peer_id, code, peer_socket=None):
 		# code = 1 only in the case when this node is the successor
+
 		# second node entered
 		if self.is_bootstrap and self.get_successor() == None:
 			self.set_successor([peer_id, [peer_ip_address, peer_port], peer_socket])
@@ -241,10 +248,12 @@ class Node():
 			self.add_socket(peer_socket)
 			# let second node know what's up
 			print("2nd node entered: ", peer_id)
-			msg = [[self.get_id(), self.get_counter(), 0], [[self.ip_address, self.port, self.id], [self.ip_address, self.port, self.id]]]
+			msg = [[self.get_id(), self.get_counter(), 0], [[self.ip_address, self.port, self.id], [self.ip_address, self.port, self.id], [self.get_k(), self.get_consistency()]]]
 			msg = pickle.dumps(msg, -1)
 			peer_socket.send(msg)
+
 		# if we have just been informed about a new predecessor
+
 		elif (self.in_between_pred(peer_id) and code == 1) or code == 3:
 			former_predecessor = self.get_predecessor()
 			# remove socket only node to be added is not the third one
@@ -256,12 +265,17 @@ class Node():
 			else:
 				self.set_predecessor([peer_id, [peer_ip_address, peer_port], self.get_successor()[2]])
 			print("informed of a predecessor: ", peer_id)
+
 		# if it is the successor of the current node
 		elif self.in_between_succ(peer_id) or code == 2:
 			former_successor = self.get_successor()
 			# remove socket only node to be added is not the third one
 			if former_successor[0] != self.get_predecessor()[0]:
 				self.remove_socket(former_successor[2])
+			# if code == 2 and self.is_bootstrap and self.get_id() == peer_id: # bootstrap is alone
+			# 	self.set_predecessor(None)
+			# 	self.set_successor(None)
+			# 	# return
 			if peer_id != self.get_predecessor()[0]:   # checking if pred and succ is the same node
 				if peer_socket == None:
 					peer_socket = self.create_socket(peer_ip_address, peer_port)
@@ -270,11 +284,11 @@ class Node():
 			else:
 				self.set_successor([peer_id, [peer_ip_address, peer_port], self.get_predecessor()[2]])
 			if code == 0:
-				msg = [[self.get_id(), self.get_counter(), 0], [[self.ip_address, self.port, self.id], [former_successor[1][0], former_successor[1][1], former_successor[0]]]]
+				msg = [[self.get_id(), self.get_counter(), 0], [[self.ip_address, self.port, self.id], [former_successor[1][0], former_successor[1][1], former_successor[0]] , [self.get_k(), self.get_consistency()]]]
 			elif code == 1:
 				msg = [[self.get_id(), self.get_counter(), 1], [self.get_ip_address(), self.get_port()]]
 			elif code == 2:
-				msg = [[self.get_id(), self.get_counter(), 3], [[self.ip_address, self.port, self.id], [self.ip_address, self.port, self.id]]]
+				msg = [[self.get_id(), self.get_counter(), 3], [[self.ip_address, self.port, self.id], [self.ip_address, self.port, self.id], [self.get_k(), self.get_consistency()]]]
 			msg = pickle.dumps(msg, -1)
 			self.get_successor()[2].send(msg)
 			print("found_successor: ", peer_id)
@@ -287,7 +301,7 @@ class Node():
 
 	def join(self, pred, succ, bootstrap_socket=None):
 		self.add_socket(pred[2])
-		# check if this is the socond node to be connected
+		# check if this is the second node to be connected
 		if self.compute_id(pred[0], pred[1]) == succ[2]:
 			self.set_predecessor([self.compute_id(pred[0], pred[1]), [pred[0], pred[1]], pred[2]])
 			self.set_successor([self.compute_id(pred[0], pred[1]), [pred[0], pred[1]], pred[2]])

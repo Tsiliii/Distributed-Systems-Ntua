@@ -56,7 +56,10 @@ def connect_to_dht():
 			if notified_socket == client_socket:
 				successor_id = node.compute_id(bootstrap_ip, bootstrap_port)
 				# wait until info about predecessor and successor arrives
-				[_, [_, succ]] = receive(client_socket)
+				[_, [_, succ, [answer_k, answer_consistency]]] = receive(client_socket)
+				# set consistency and k
+				node.set_consistency(answer_consistency)
+				node.set_k(answer_k)
 				node.join([bootstrap_ip, bootstrap_port, client_socket], succ)
 			# then check for other servers, they will try to connect to this one
 			else:
@@ -64,7 +67,10 @@ def connect_to_dht():
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				predecessor_socket, _ = node.get_sockets()[0].accept()
 				# wait until info about predecessor and successor arrives
-				[_, [pred, succ]] = receive(predecessor_socket)
+				[_, [pred, succ, [answer_k, answer_consistency]]] = receive(predecessor_socket)
+				# set consistency and k
+				node.set_consistency(answer_consistency)
+				node.set_k(answer_k)
 				# check if bootstarp is the successor
 				if succ[0] == bootstrap_ip and succ[1] == bootstrap_port:
 					node.join([pred[0], pred[1], predecessor_socket], succ, client_socket)
@@ -97,6 +103,8 @@ def receive(socket):
 			sys.exit()
 
 def main_loop():
+	print("pre",node.get_predecessor())
+	print("succ",node.get_successor())
 	while True:
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
@@ -140,8 +148,8 @@ def main_loop():
 			value = sys.stdin.readline().rstrip()
 			if str(value) == "depart":
 				node.depart()
-				return
 			elif str(value).lower().startswith("insert"):
+				print(node.get_k())
 				temporary = str(value)[6:].split(',')
 				if (len(temporary) > 1):
 					key = temporary[0].strip()
@@ -162,6 +170,8 @@ def main_loop():
 				starting_node_ID = temporary[]
 				node.query(key, starting_node_ID)
 			print(f"You entered: {value}")
+		# check all sockkets to be closed if other closed them close them aswell
+
 
 if __name__ == '__main__':
 	# print(f"Arguments count: {len(sys.argv)}")

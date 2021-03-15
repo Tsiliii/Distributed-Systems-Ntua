@@ -48,23 +48,29 @@ def connect_to_dht():
 	# only the bootstrap will try to connect with this server
 	while node.get_predecessor() == None or node.get_successor() == None:
 		# check server socket for other nodes and client socket for bootstrap
-		read_sockets, _, exception_sockets = select.select(node.get_sockets()+[client_socket], [], node.get_sockets()+[client_socket], 0)
+		read_sockets, _, exception_sockets = select.select(node.get_sockets()+[client_socket], [], node.get_sockets()+[client_socket])
 		# iterate over notified sockets
 		for notified_socket in read_sockets:
 			node.set_counter()
 			# first check for bootstrap
 			if notified_socket == client_socket:
-				predecessor_id = node.compute_id(bootstrap_ip, bootstrap_port)
+				successor_id = node.compute_id(bootstrap_ip, bootstrap_port)
 				# wait until info about predecessor and successor arrives
-				[_, [_, succ]] = receive(client_socket)
+				[_, [_, succ, [answer_k, answer_consistency]]] = receive(client_socket)
+				# set consistency and k
+				node.set_consistency(answer_consistency)
+				node.set_k(answer_k)
 				node.join([bootstrap_ip, bootstrap_port, client_socket], succ)
 			# then check for other servers, they will try to connect to this one
 			else:
-				# the returned value is a pair (conn, address) where conn is a new socket object usable to send and 
+				# the returned value is a pair (conn, address) where conn is a new socket object usable to send and
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				predecessor_socket, _ = node.get_sockets()[0].accept()
 				# wait until info about predecessor and successor arrives
-				[_, [pred, succ]] = receive(predecessor_socket)
+				[_, [pred, succ, [answer_k, answer_consistency]]] = receive(predecessor_socket)
+				# set consistency and k
+				node.set_consistency(answer_consistency)
+				node.set_k(answer_k)
 				# check if bootstarp is the successor
 				if succ[0] == bootstrap_ip and succ[1] == bootstrap_port:
 					node.join([pred[0], pred[1], predecessor_socket], succ, client_socket)
@@ -97,6 +103,8 @@ def receive(socket):
 			sys.exit()
 
 def main_loop():
+	print("pre",node.get_predecessor())
+	print("succ",node.get_successor())
 	while True:
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
@@ -104,12 +112,12 @@ def main_loop():
 		# iterate over notified ones
 		for notified_socket in read_sockets:
 			if notified_socket == node.get_sockets()[0]:
-				# the returned value is a pair (conn, address) where conn is a new socket object usable to send and 
+				# the returned value is a pair (conn, address) where conn is a new socket object usable to send and
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				peer_socket, peer_address = node.get_sockets()[0].accept()
 				# wait for info on port
 				[[peer_id, _, code], pred] = receive(peer_socket)
-				print("just received a new connection from", peer_id)
+				print("just received a new connection from", peer_id, "with info", pred)
 				node.update_dht(pred[0], pred[1], peer_id, code, peer_socket)
 			else:
 				[[peer_id, count, code], info] = receive(notified_socket)
@@ -117,6 +125,18 @@ def main_loop():
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
 					node.update_dht(succ[0], succ[1], succ[2], code)
+				#insert code
+				elif code == 4:
+					[key,value] = info
+					node.insert(key,value)
+				#delete code
+				elif code == 5:
+					[key] = info
+					node.delete(key)
+				#insert replica code
+				elif code == 6:
+					[key, value, peer_ip, peer_port, peer_id, currentk] = info
+					node.replica_insert(key, value, peer_ip, peer_port, peer_id, currentk)
 
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]
@@ -124,6 +144,20 @@ def main_loop():
 			value = sys.stdin.readline().rstrip()
 			if str(value) == "depart":
 				node.depart()
+			elif str(value).lower().startswith("insert"):
+				temporary = str(value)[6:].split(',')
+				if (len(temporary) > 1):
+					key = temporary[0].strip()
+					some_value = temporary[1].strip()
+					node.insert(key,some_value)
+
+				# print("hashkey was",node.hash(key))
+			elif str(value).lower().startswith("delete"):
+				temporary = str(value)[6:]
+				key = temporary.strip()
+				some_value = temporary[1].strip()
+				node.delete(key)
+				# print("hashkey was",node.hash(key))
 			print(f"You entered: {value}")
 
 if __name__ == '__main__':
