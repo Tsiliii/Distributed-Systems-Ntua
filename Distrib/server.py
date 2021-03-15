@@ -129,6 +129,10 @@ def main_loop():
 				elif code == 6:
 					[key, value, peer_ip, peer_port, peer_id, currentk] = info
 					node.replica_insert(key, value, peer_ip, peer_port, peer_id, currentk)
+				#query code
+				elif code == 8:
+					[key, starting_node_ID] = info
+					node.query(key, starting_node_ID)
 
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]
@@ -151,6 +155,12 @@ def main_loop():
 				some_value = temporary[1].strip()
 				node.delete(key)
 				# print("hashkey was",node.hash(key))
+			elif str(value).lower().startswith("query"):
+				starting_node_ID = node.get_id()
+				temporary = str(value)[5:].split(',')
+				key = temporary[0]
+				starting_node_ID = temporary[]
+				node.query(key, starting_node_ID)
 			print(f"You entered: {value}")
 
 if __name__ == '__main__':

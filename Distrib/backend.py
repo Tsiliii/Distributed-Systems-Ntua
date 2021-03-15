@@ -16,7 +16,7 @@ class Node():
 		self.sockets_to_be_closed = []
 		self.counter = 0
 		self.k = 1
-		self.consistency = 'lazy'
+		self.consistency = 'lazy' #or 'linearizability'
 
 	def get_id(self):
 		return self.id
@@ -52,6 +52,8 @@ class Node():
 		return self.k
 
 	def get_data(self, key):
+		if key == "*":
+			return self.data
 		return self.data[key]
 
 	def check_if_in_data(self, key):
@@ -122,8 +124,37 @@ class Node():
 		return
 
 
-	def query(self, key, k):
-		return
+	def query(self, key, starting_node_ID):
+		if self.get_id() == starting_node_ID:
+			if key == "*":
+				return 
+			else:
+				print("The key you asked wasn't found!")
+			return
+		if key == "*":
+			tuples = self.get_data(key)
+			print("Key => Value pairs for node: ",self.get_id())
+			for x in tuples.keys():
+				print(x +" => " + d[x])
+			msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID]]
+			msg = pickle.dumps(msg, -1)
+			succ = self.get_successor()
+			succ[2].send(msg)
+			return
+		else:
+			if self.consistency == "lazy":
+				if self.check_if_in_data(key): #That means that the node is in the replication chain
+					print(key + " => " + self.get_data(key))
+					return
+				else: #That means the node is outside the replication chain, we must find the first node that has it
+					succ = self.get_successor()
+					msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID]]
+					msg = pickle.dumps(msg, -1)
+					succ = self.get_successor()
+					return
+			elif self.consistency == "linearizability":
+				succ = self.get_successor()			
+				if 
 
 	def delete(self, key):
 			pred = self.get_predecessor()[0]
