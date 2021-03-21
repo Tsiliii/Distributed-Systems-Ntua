@@ -147,8 +147,9 @@ def main_loop():
 					node.replica_delete(key, peer_ip, peer_port, peer_id, currentk)
 				#query code
 				elif code == 8:
-					[key, starting_node_ID] = info
-					node.query(key, starting_node_ID)
+					[key, starting_node_ID, round_trip] = info
+					node.query(key, starting_node_ID, made_a_round_trip = round_trip)
+
 
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]
@@ -174,9 +175,7 @@ def main_loop():
 
 			elif str(value).lower().startswith("query"):
 				starting_node_ID = node.get_id()
-				temporary = str(value)[5:].split(',')
-				key = temporary[0]
-				# starting_node_ID = temporary[]
+				key = str(value)[6:-1]
 				node.query(key, starting_node_ID)
 			print(f"You entered: {value}")
 		# check all sockkets to be closed if other closed them close them aswell
