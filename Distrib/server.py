@@ -114,6 +114,7 @@ def main_loop():
 
 		# iterate over notified ones
 		for notified_socket in read_sockets:
+			print(node.get_predecessor())
 			if notified_socket == node.get_sockets()[0]:
 				# the returned value is a pair (conn, address) where conn is a new socket object usable to send and
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
