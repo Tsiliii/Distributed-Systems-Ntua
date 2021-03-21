@@ -20,8 +20,8 @@ class Node():
 		self.replica_counter = {}
 
 	def get_id(self, first4 = True):
-		if first4:
-			return int(str(self.id)[:4])
+		# if first4:
+		# 	return int(str(self.id)[:4])
 		return self.id
 
 	def get_ip_address(self):
@@ -179,10 +179,10 @@ class Node():
 						msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID]]
 						msg = pickle.dumps(msg, -1)
 						succ[2].send(msg)
-						return	
+						return
 					else:
 						print(key + " => " + self.get_data(key))
-						return	
+						return
 
 	def delete(self, key):
 			pred = self.get_predecessor()[0]
@@ -227,11 +227,13 @@ class Node():
 		# return port%100
 		# assumes ip_address is a string and port is an int
 		digest = sha1((ip_address+':'+str(port)).encode('ascii')).hexdigest()
-		return int(digest, 16)
+		return int(str(int(digest, 16))[:4])
+		# return int(digest, 16)
 
 	def hash(self, key):
 		digest = sha1((str(key)).encode('ascii')).hexdigest()
-		return int(digest, 16)
+		return int(str(int(digest, 16))[:4])
+		# return int(digest, 16)
 
 	def add_socket(self, socket):
 		if socket not in self.socket_list:
