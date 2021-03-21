@@ -20,7 +20,8 @@ class Node():
 		self.replica_counter = {}
 
 	def get_id(self):
-		return self.id
+		return int(str(self.id)[:4])
+		# return self.id
 
 	def get_ip_address(self):
 		return self.ip_address
@@ -84,7 +85,7 @@ class Node():
 			pred = self.get_predecessor()[0]
 			me = self.get_id()
 			hashkey = self.hash(key)
-			print(pred,hashkey,me)
+			# print(pred,hashkey,me)
 			if ( me >= hashkey and pred < hashkey or (me < pred and ( me <= hashkey and pred < hashkey ) or (hashkey <= me and hashkey < pred) ) ):
 				if self.check_if_in_data(key):
 					print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
@@ -107,7 +108,6 @@ class Node():
 				print("Found insert for",self.hash(key),", passing it forward")
 				msg = [[self.get_id(), self.get_counter(), 4],[key,value]]
 				msg = pickle.dumps(msg, -1)
-				# print(self.get_successor())
 				self.get_successor()[2].send(msg)
 				return
 
@@ -161,7 +161,7 @@ class Node():
 			pred = self.get_predecessor()[0]
 			me = self.get_id()
 			hashkey = self.hash(key)
-			print(pred,hashkey,me)
+			# print(pred,hashkey,me)
 			if ( me >= hashkey and pred < hashkey or (me < pred and ( me <= hashkey and pred < hashkey ) or (hashkey <= me and hashkey < pred) ) ):
 				if self.check_if_in_data(key):
 					print("I,",self.get_id(),"just deleted key:",key,"with value:",self.get_data(key))
