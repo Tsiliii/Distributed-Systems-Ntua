@@ -107,10 +107,10 @@ def main_loop(node):
 			if str(value) == "depart":
 				node.depart()
 			elif str(value).lower().startswith("insert"):
-				temporary = str(value)[6:].split(',')
-				if (len(temporary) > 1):
-					key = temporary[0].strip()
-					some_value = temporary[1].strip()
+				temporary = str(value).split(',')
+				if (len(temporary) > 2):
+					key = temporary[1].strip()
+					some_value = temporary[2].strip()
 					node.insert(key,some_value)
 			elif str(value).lower().startswith("delete"):
 				temporary = str(value)[6:]
