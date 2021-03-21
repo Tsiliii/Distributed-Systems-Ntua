@@ -84,10 +84,10 @@ class Node():
 
 	def insert(self, key, value):
 			pred = self.get_predecessor()[0]
-			me = self.get_id(False)
+			me = self.get_id()
 			hashkey = self.hash(key)
-			print(pred,hashkey,me)
-			if ( me >= hashkey and pred < hashkey or (me < pred and ( me <= hashkey and pred < hashkey ) or (hashkey <= me and hashkey < pred) ) ):
+			# print(pred,hashkey,me)
+			if ( (me >= hashkey and pred < hashkey) or (me < pred and (( me <= hashkey and pred < hashkey ) or (hashkey <= me and hashkey < pred)))):
 				if self.check_if_in_data(key):
 					print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
 					self.update_data(key,value)
@@ -189,7 +189,7 @@ class Node():
 			me = self.get_id()
 			hashkey = self.hash(key)
 			# print(pred,hashkey,me)
-			if ( me >= hashkey and pred < hashkey or (me < pred and ( me <= hashkey and pred < hashkey ) or (hashkey <= me and hashkey < pred) ) ):
+			if ( (me >= hashkey and pred < hashkey) or (me < pred and (( me <= hashkey and pred < hashkey ) or (hashkey <= me and hashkey < pred)))):
 				if self.check_if_in_data(key):
 					print("I,",self.get_id(),"just deleted key:",key,"with value:",self.get_data(key))
 					self.delete_data(key)
