@@ -126,21 +126,19 @@ class Node():
 			print("Finished the whole circle, network cardinality is smaller than k =",self.get_k())
 		return
 
-	def query(self, key, starting_node_ID):
-		if self.get_id() == starting_node_ID:
-			if key == "*":
-				return
-			else:
-				print("The key you asked wasn't found!")
-			return
+	def query(self, key, starting_node_ID, made_a_round_trip=False):
 		if key == "*":
-			tuples = self.get_data(key)
 			print("Key => Value pairs for node: ",self.get_id())
+			tuples = self.get_data(key)
 			for x in tuples.keys():
-				print(x +" => " + d[x])
-			msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID]]
-			msg = pickle.dumps(msg, -1)
+				print(x +" => " + tuples[x])
 			succ = self.get_successor()
+			[ID, address, socket] = succ
+			# if ID == starting_node_ID
+			if int(str(ID)[:4]) == starting_node_ID:
+				return
+			msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, False]]
+			msg = pickle.dumps(msg, -1)
 			succ[2].send(msg)
 			return
 		else:
@@ -150,12 +148,40 @@ class Node():
 					return
 				else: #That means the node is outside the replication chain, we must find the first node that has it
 					succ = self.get_successor()
-					msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID]]
+					[ID, address, socket] = succ
+					if self.get_id() == starting_node_ID:
+						if made_a_round_trip:
+							print("The key wasn't found!")
+							return
+						else:
+							made_a_round_trip = True
+					msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, made_a_round_trip]]
 					msg = pickle.dumps(msg, -1)
-					succ = self.get_successor()
+					succ[2].send(msg)
 					return
 			elif self.consistency == "linearizability":
-				pass
+				if not self.check_if_in_data(key):
+					succ = self.get_successor()
+					if self.get_id() == starting_node_ID:
+						if made_a_round_trip:
+							print("The key wasn't found!")
+							return
+						else:
+							made_a_round_trip = True
+					msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, made_a_round_trip]]
+					msg = pickle.dumps(msg, -1)
+					succ[2].send(msg)
+					return
+				else:
+					if self.get_replica_counter(key) != 1:
+						succ = self.get_successor()
+						msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID]]
+						msg = pickle.dumps(msg, -1)
+						succ[2].send(msg)
+						return	
+					else:
+						print(key + " => " + self.get_data(key))
+						return	
 
 	def delete(self, key):
 			pred = self.get_predecessor()[0]
