@@ -250,15 +250,8 @@ class Node():
 		#print("in_between_succ", x < successor_id and successor_id < id, successor_id < id and id < x, id < x and x < successor_id)
 		return (x < successor_id and successor_id < id) or (successor_id < id and id < x) or (id < x and x < successor_id)
 
-		# if self.is_bootstrap:
-		# 	print(self.in_between_pred(peer_id))
-		# 	print(code == 1)
-		# 	print(code == 3)
-		# 	print(code)
-
 	def update_dht(self, peer_ip_address, peer_port, peer_id, code, peer_socket=None):
 		# code = 1 only in the case when this node is the successor
-
 		# second node entered
 		if self.is_bootstrap and self.get_successor() == None:
 			self.set_successor([peer_id, [peer_ip_address, peer_port], peer_socket])
@@ -271,7 +264,6 @@ class Node():
 			peer_socket.send(msg)
 
 		# if we have just been informed about a new predecessor
-
 		elif (self.in_between_pred(peer_id) and code == 1) or code == 3:
 			former_predecessor = self.get_predecessor()
 			# remove socket only node to be added is not the third one
@@ -290,10 +282,10 @@ class Node():
 			# remove socket only node to be added is not the third one
 			if former_successor[0] != self.get_predecessor()[0]:
 				self.remove_socket(former_successor[2])
-			# if code == 2 and self.is_bootstrap and self.get_id() == peer_id: # bootstrap is alone
-			# 	self.set_predecessor(None)
-			# 	self.set_successor(None)
-			# 	# return
+			if code == 2 and self.is_bootstrap and self.get_id() == peer_id: # bootstrap is alone
+				self.set_predecessor(None)
+				self.set_successor(None)
+				return
 			if peer_id != self.get_predecessor()[0]:   # checking if pred and succ is the same node
 				if peer_socket == None:
 					peer_socket = self.create_socket(peer_ip_address, peer_port)
@@ -310,6 +302,7 @@ class Node():
 			msg = pickle.dumps(msg, -1)
 			self.get_successor()[2].send(msg)
 			print("found_successor: ", peer_id)
+
 		# if it is not the successor of the current node
 		else:
 			msg = [[self.get_id(), self.get_counter(), 0], [[self.ip_address, self.port, self.id], [peer_ip_address, peer_port, peer_id]]]

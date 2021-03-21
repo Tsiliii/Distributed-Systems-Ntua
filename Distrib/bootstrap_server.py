@@ -14,6 +14,10 @@ node = Node(ip, port, True)
 def create_server_socket(node):
 	# create a socket that will be used by other nodes when they first connect
 	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+	# reuse adress for debugging only
+	server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
 	server_socket.bind((ip, port))
 	# enable the server to accept connections
 	server_socket.listen()
@@ -70,7 +74,7 @@ def main_loop(node):
 				[[peer_id, count, code], info] = receive(notified_socket)
 				# check for new successor
 				if code == 0 or code == 2 or code == 3:
-					[_, succ, _] = info
+					[_, succ] = info
 					node.update_dht(succ[0], succ[1], succ[2], code)
 				elif code == 1:
 					[pred_ip, pred_port] = info

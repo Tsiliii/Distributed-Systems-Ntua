@@ -18,6 +18,10 @@ node = Node(ip, port, False)
 def create_server_socket():
 	# create a socket that will be used by other nodes when they first connect
 	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+	# reuse adress for debugging only
+	server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
 	server_socket.bind((ip, port))
 	# enable the server to accept connections
 	server_socket.listen()

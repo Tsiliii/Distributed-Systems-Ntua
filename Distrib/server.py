@@ -18,6 +18,10 @@ node = Node(ip, port, False)
 def create_server_socket():
 	# create a socket that will be used by other nodes when they first connect
 	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+	# reuse adress for debugging only
+	server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
 	server_socket.bind((ip, port))
 	# enable the server to accept connections
 	server_socket.listen()
@@ -67,7 +71,8 @@ def connect_to_dht():
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				predecessor_socket, _ = node.get_sockets()[0].accept()
 				# wait until info about predecessor and successor arrives
-				[_, [pred, succ, [answer_k, answer_consistency]]] = receive(predecessor_socket)
+				# [_, [pred, succ, [answer_k, answer_consistency]]] = receive(predecessor_socket)
+				[_, [pred, succ]] = receive(predecessor_socket)
 				# set consistency and k
 				node.set_consistency(answer_consistency)
 				node.set_k(answer_k)
@@ -152,6 +157,8 @@ def main_loop():
 			value = sys.stdin.readline().rstrip()
 			if str(value) == "depart":
 				node.depart()
+				# return 0
+				
 			elif str(value).lower().startswith("insert"):
 				print(node.get_k())
 				temporary = str(value)[6:].split(',')
@@ -160,18 +167,17 @@ def main_loop():
 					some_value = temporary[1].strip()
 					node.insert(key,some_value)
 
-				# print("hashkey was",node.hash(key))
 			elif str(value).lower().startswith("delete"):
 				temporary = str(value)[6:]
 				key = temporary.strip()
 				some_value = temporary[1].strip()
 				node.delete(key)
-				# print("hashkey was",node.hash(key))
+
 			elif str(value).lower().startswith("query"):
 				starting_node_ID = node.get_id()
 				temporary = str(value)[5:].split(',')
 				key = temporary[0]
-				starting_node_ID = temporary[]
+				# starting_node_ID = temporary[]
 				node.query(key, starting_node_ID)
 			print(f"You entered: {value}")
 		# check all sockkets to be closed if other closed them close them aswell
