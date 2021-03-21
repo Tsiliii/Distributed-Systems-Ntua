@@ -165,10 +165,11 @@ def main_loop():
 					node.insert(key,some_value)
 
 			elif str(value).lower().startswith("delete"):
-				temporary = str(value)[6:]
-				key = temporary.strip()
-				some_value = temporary[1].strip()
-				node.delete(key)
+				temporary = str(value).split(',')
+				if (len(temporary) > 1)
+					key = temporary.strip()
+					some_value = temporary[1].strip()
+					node.delete(key)
 			else:
 				print(f"You entered: {value}, did you make a mistake?")
 			print()
