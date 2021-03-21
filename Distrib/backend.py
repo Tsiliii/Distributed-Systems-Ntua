@@ -86,6 +86,18 @@ class Node():
 			pred = self.get_predecessor()[0]
 			me = self.get_id()
 			hashkey = self.hash(key)
+
+			#one node case
+			if me == pred:
+				if self.check_if_in_data(key):
+					print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
+					self.update_data(key,value)
+					return
+				else:
+					print("I,",self.get_id(),"just inserted data",key,"with hash id",self.hash(key))
+					self.insert_data(key,value,self.get_k())
+					return
+
 			# print(pred,hashkey,me)
 			if ( (me >= hashkey and pred < hashkey) or (me < pred and (( me <= hashkey and pred < hashkey ) or (hashkey <= me and hashkey < pred)))):
 				if self.check_if_in_data(key):
@@ -120,9 +132,10 @@ class Node():
 			else:
 				print("I,",self.get_id(),"just inserted replica",currentk ,"for key:", key, "with hash id", self.hash(key))
 				self.insert_data(key,value,currentk)
-			msg = [[self.get_id(), self.get_counter(), 6],[key, value, peer_ip, peer_port, peer_id, currentk - 1]]
-			msg = pickle.dumps(msg, -1)
-			self.get_successor()[2].send(msg)
+			if currentk != 1:
+				msg = [[self.get_id(), self.get_counter(), 6],[key, value, peer_ip, peer_port, peer_id, currentk - 1]]
+				msg = pickle.dumps(msg, -1)
+				self.get_successor()[2].send(msg)
 		elif self.get_id() == peer_id and currentk != 0:
 			print("Finished the whole circle, network cardinality is smaller than k =",self.get_k())
 		return
@@ -188,6 +201,17 @@ class Node():
 			pred = self.get_predecessor()[0]
 			me = self.get_id()
 			hashkey = self.hash(key)
+
+			#one node case
+			if me == pred:
+				if self.check_if_in_data(key):
+					print("I,",self.get_id(),"just deleted key:",key,"with value:",self.get_data(key))
+					self.delete_data(key)
+					return
+				else:
+					print("I,",self.get_id(),"tried to delete missing data with key",key)
+					return
+
 			# print(pred,hashkey,me)
 			if ( (me >= hashkey and pred < hashkey) or (me < pred and (( me <= hashkey and pred < hashkey ) or (hashkey <= me and hashkey < pred)))):
 				if self.check_if_in_data(key):
@@ -204,7 +228,6 @@ class Node():
 				print("Found delete for",self.hash(key),", passing it forward")
 				msg = [[self.get_id(), self.get_counter(), 5],[key]]
 				msg = pickle.dumps(msg, -1)
-				print(self.get_successor())
 				self.get_successor()[2].send(msg)
 				return
 
@@ -212,12 +235,13 @@ class Node():
 		if currentk != 0 and self.get_id() != peer_id:
 			if self.check_if_in_data(key):
 				print("I,",self.get_id(),"just deleted replica",currentk ,"with key:",key,'and value:',self.get_data(key))
-				self.delete(key,currentk)
+				self.delete_data(key)
 			else:
 				print("I,",self.get_id(),"tried to delete missing data with key",key,".Something wrong must have happened")
-			msg = [[self.get_id(), self.get_counter(), 7],[key, peer_ip, peer_port, peer_id, currentk - 1]]
-			msg = pickle.dumps(msg, -1)
-			self.get_successor()[2].send(msg)
+			if currentk != 1:
+				msg = [[self.get_id(), self.get_counter(), 7],[key, peer_ip, peer_port, peer_id, currentk - 1]]
+				msg = pickle.dumps(msg, -1)
+				self.get_successor()[2].send(msg)
 		elif self.get_id() == peer_id and currentk != 0:
 			print("Finished the whole circle, network cardinality is smaller than k =",self.get_k())
 		return

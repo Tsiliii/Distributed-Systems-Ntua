@@ -59,6 +59,7 @@ def main_loop(node):
 		for notified_socket in read_sockets:
 			node.set_counter()
 			# if notified socket is a server socket - new connection, accept it
+			print()
 			if notified_socket == node.get_sockets()[0]:
 				# the returned value is a pair (conn, address) where conn is a new socket object usable to send and
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
@@ -70,6 +71,7 @@ def main_loop(node):
 				if node.in_between_pred(peer_id) and code == 0 and node.get_predecessor() != None:
 					node.add_socket(peer_socket)
 				node.update_dht(peer_ip_address, peer_port, peer_id, code, peer_socket)
+				print()
 			else:
 				[[peer_id, count, code], info] = receive(notified_socket)
 				# check for new successor
@@ -99,10 +101,12 @@ def main_loop(node):
 				elif code == 8:
 					[key, starting_node_ID, round_trip] = info
 					node.query(key, starting_node_ID, made_a_round_trip = round_trip)
+				print()
 
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]
 		if input:
+			print()
 			value = sys.stdin.readline().rstrip()
 			if str(value) == "depart":
 				node.depart()
@@ -121,7 +125,9 @@ def main_loop(node):
 				starting_node_ID = node.get_id()
 				key = str(value)[6:-1]
 				node.query(key, starting_node_ID)
-			print(f"You entered: {value}")
+			else:
+				print(f"You entered: {value}, did you make a mistake?")
+			print()
 
 if __name__ == '__main__':
 	for i, arg in enumerate(sys.argv):

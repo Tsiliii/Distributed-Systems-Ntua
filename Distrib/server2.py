@@ -113,6 +113,7 @@ def main_loop():
 
 		# iterate over notified ones
 		for notified_socket in read_sockets:
+			print()
 			if notified_socket == node.get_sockets()[0]:
 				# the returned value is a pair (conn, address) where conn is a new socket object usable to send and
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
@@ -121,6 +122,7 @@ def main_loop():
 				[[peer_id, _, code], pred] = receive(peer_socket)
 				print("just received a new connection from", peer_id, "with info", pred)
 				node.update_dht(pred[0], pred[1], peer_id, code, peer_socket)
+				print()
 			else:
 				[[peer_id, count, code], info] = receive(notified_socket)
 				# check for new successor
@@ -147,12 +149,12 @@ def main_loop():
 				elif code == 8:
 					[key, starting_node_ID, round_trip] = info
 					node.query(key, starting_node_ID, made_a_round_trip = round_trip)
-
-
+				print()
 
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]
 		if input:
+			print()
 			value = sys.stdin.readline().rstrip()
 			if str(value) == "depart":
 				node.depart()
@@ -168,12 +170,14 @@ def main_loop():
 				key = temporary.strip()
 				some_value = temporary[1].strip()
 				node.delete(key)
-				# print("hashkey was",node.hash(key))
+
 			elif str(value).lower().startswith("query"):
 				starting_node_ID = node.get_id()
 				key = str(value)[6:-1]
 				node.query(key, starting_node_ID)
-			print(f"You entered: {value}")
+			else:
+				print(f"You entered: {value}, did you make a mistake?")
+			print()
 
 if __name__ == '__main__':
 	create_server_socket()
