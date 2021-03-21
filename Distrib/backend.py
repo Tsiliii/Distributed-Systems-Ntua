@@ -17,7 +17,8 @@ class Node():
 		self.counter = 0
 		self.k = 1
 		self.consistency = 'lazy' #or 'linearizability'
-
+		self.replica_counter = {}
+		
 	def get_id(self):
 		return self.id
 
@@ -127,7 +128,7 @@ class Node():
 	def query(self, key, starting_node_ID):
 		if self.get_id() == starting_node_ID:
 			if key == "*":
-				return 
+				return
 			else:
 				print("The key you asked wasn't found!")
 			return
@@ -153,7 +154,7 @@ class Node():
 					succ = self.get_successor()
 					return
 			elif self.consistency == "linearizability":
-				pass 	
+				pass
 
 	def delete(self, key):
 			pred = self.get_predecessor()[0]
