@@ -107,8 +107,6 @@ def receive(socket):
 			sys.exit()
 
 def main_loop():
-	print("pre",node.get_predecessor())
-	print("succ",node.get_successor())
 	while True:
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
