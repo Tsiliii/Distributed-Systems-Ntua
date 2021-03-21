@@ -137,6 +137,10 @@ def main_loop():
 				elif code == 6:
 					[key, value, peer_ip, peer_port, peer_id, currentk] = info
 					node.replica_insert(key, value, peer_ip, peer_port, peer_id, currentk)
+				#delete replica code
+				elif code == 7:
+					[key, peer_ip, peer_port, peer_id, currentk] = info
+					node.replica_delete(key, peer_ip, peer_port, peer_id, currentk)
 
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]

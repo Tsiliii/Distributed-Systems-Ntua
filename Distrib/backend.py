@@ -18,7 +18,7 @@ class Node():
 		self.k = 1
 		self.consistency = 'lazy' #or 'linearizability'
 		self.replica_counter = {}
-		
+
 	def get_id(self):
 		return self.id
 
@@ -60,8 +60,9 @@ class Node():
 	def check_if_in_data(self, key):
 		return key in self.data
 
-	def insert_data(self, key, value):
+	def insert_data(self, key, value, currentk):
 		self.data[key] = value
+		self.replica_counter[key] = currentk
 
 	def update_data(self, key, value):
 		self.data[key] = value
@@ -69,6 +70,7 @@ class Node():
 	def delete_data(self, key):
 		if self.check_if_in_data(key):
 			del self.data[key]
+			del self.replica_counter[key]
 
 	def set_counter(self):
 		self.counter += 1
@@ -87,17 +89,16 @@ class Node():
 				if self.check_if_in_data(key):
 					print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
 					self.update_data(key,value)
-					if self.k != 1:
-						msg = [[self.get_id(), self.get_counter(), 6],[key, value, self.get_ip_address(), self.get_port(), self.get_id(), self.k - 1]]
+					if self.get_k() != 1:
+						msg = [[self.get_id(), self.get_counter(), 6],[key, value, self.get_ip_address(), self.get_port(), self.get_id(), self.get_k() - 1]]
 						msg = pickle.dumps(msg, -1)
-						# print(self.get_successor())
 						self.get_successor()[2].send(msg)
 					return
 				else:
 					print("I,",self.get_id(),"just inserted data",key,"with hash id",self.hash(key))
-					self.insert_data(key,value)
-					if self.k != 1:
-						msg = [[self.get_id(), self.get_counter(), 6],[key, value, self.get_ip_address(), self.get_port(), self.get_id(), self.k - 1]]
+					self.insert_data(key,value,self.get_k())
+					if self.get_k() != 1:
+						msg = [[self.get_id(), self.get_counter(), 6],[key, value, self.get_ip_address(), self.get_port(), self.get_id(), self.get_k() - 1]]
 						msg = pickle.dumps(msg, -1)
 						# print(self.get_successor())
 						self.get_successor()[2].send(msg)
@@ -114,16 +115,16 @@ class Node():
 		if currentk != 0 and self.get_id() != peer_id:
 			if self.check_if_in_data(key):
 				print("I,",self.get_id(),"just updated replica",currentk ,"for key:",key,"with new value:",value,'and old value:',self.get_data(key))
+				self.update_data(key,value)
 			else:
 				print("I,",self.get_id(),"just inserted replica",currentk ,"for key:", key, "with hash id", self.hash(key))
-			self.update_data(key,value)
+				self.insert_data(key,value,currentk)
 			msg = [[self.get_id(), self.get_counter(), 6],[key, value, peer_ip, peer_port, peer_id, currentk - 1]]
 			msg = pickle.dumps(msg, -1)
 			self.get_successor()[2].send(msg)
 		elif self.get_id() == peer_id and currentk != 0:
-			print("Finished the whole circle, network cardinality is smaller than k =",self.k)
+			print("Finished the whole circle, network cardinality is smaller than k =",self.get_k())
 		return
-
 
 	def query(self, key, starting_node_ID):
 		if self.get_id() == starting_node_ID:
@@ -165,7 +166,10 @@ class Node():
 				if self.check_if_in_data(key):
 					print("I,",self.get_id(),"just deleted key:",key,"with value:",self.get_data(key))
 					self.delete_data(key)
-					return
+					if self.get_k() != 1:
+						msg = [[self.get_id(), self.get_counter(), 7],[key, self.get_ip_address(), self.get_port(), self.get_id(), self.get_k() - 1]]
+						msg = pickle.dumps(msg, -1)
+						self.get_successor()[2].send(msg)
 				else:
 					print("I,",self.get_id(),"tried to delete missing data with key",key)
 					return
@@ -176,6 +180,20 @@ class Node():
 				print(self.get_successor())
 				self.get_successor()[2].send(msg)
 				return
+
+	def replica_delete(self,key,peer_ip,peer_port,peer_id,currentk):
+		if currentk != 0 and self.get_id() != peer_id:
+			if self.check_if_in_data(key):
+				print("I,",self.get_id(),"just deleted replica",currentk ,"with key:",key,'and value:',self.get_data(key))
+				self.delete(key,currentk)
+			else:
+				print("I,",self.get_id(),"tried to delete missing data with key",key,".Something wrong must have happened")
+			msg = [[self.get_id(), self.get_counter(), 7],[key, peer_ip, peer_port, peer_id, currentk - 1]]
+			msg = pickle.dumps(msg, -1)
+			self.get_successor()[2].send(msg)
+		elif self.get_id() == peer_id and currentk != 0:
+			print("Finished the whole circle, network cardinality is smaller than k =",self.get_k())
+		return
 
 	# use sha1 to compute id
 	def compute_id(self, ip_address, port):

@@ -137,6 +137,10 @@ def main_loop():
 				elif code == 6:
 					[key, value, peer_ip, peer_port, peer_id, currentk] = info
 					node.replica_insert(key, value, peer_ip, peer_port, peer_id, currentk)
+				#delete replica code
+				elif code == 7:
+					[key, peer_ip, peer_port, peer_id, currentk] = info
+					node.replica_delete(key, peer_ip, peer_port, peer_id, currentk)
 				#query code
 				elif code == 8:
 					[key, starting_node_ID] = info
