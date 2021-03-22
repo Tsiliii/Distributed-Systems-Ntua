@@ -325,6 +325,7 @@ class Node():
 			msg = [[self.get_id(), self.get_counter(), 0], [[self.ip_address, self.port, self.get_id()], [self.ip_address, self.port, self.get_id()], [self.get_k(), self.get_consistency()]]]
 			msg = pickle.dumps(msg, -1)
 			peer_socket.send(msg)
+			
 		# if we have just been informed about a new predecessor
 		elif (self.in_between_pred(peer_id) and code == 1) or code == 3:
 			former_predecessor = self.get_predecessor()
@@ -345,6 +346,7 @@ class Node():
 			if former_successor[0] != self.get_predecessor()[0]:
 				self.remove_socket(former_successor[2])
 			if code == 2 and self.is_bootstrap and self.get_id() == peer_id: # bootstrap is alone
+				print("I am all alone in this world yet again")
 				self.set_predecessor(None)
 				self.set_successor(None)
 				return
@@ -399,16 +401,18 @@ class Node():
 		successor = self.get_successor()
 		msg = [[self.get_id(), self.get_counter(), 2], [[self.ip_address, self.port, self.get_id()], [successor[1][0], successor[1][1], successor[0]]]]
 		msg = pickle.dumps(msg, -1)
-		# successor[2].close()
+
 		if self.get_successor()[0] == self.get_predecessor()[0]:
-			print("Only one Remaining is Bootstrap")
+			self.get_predecessor()[2].send(msg)
+			print("Only node remaining is Bootstrap")
+			self.get_successor()[2].shutdown(socket.SHUT_RDWR)
+			self.get_successor()[2].close()
 			return
+
 		self.get_predecessor()[2].send(msg)
 
-		# self.get_predecessor()[2].close()
-
-		# for socket in self.get_sockets():
-		# 	self.remove_socket(socket)
+		for some_socket in self.get_sockets():
+			self.remove_socket(some_socket)
 		print(f"sending message to {self.get_predecessor()[2]}")
 
 	def create_socket(self, ip_address, port):

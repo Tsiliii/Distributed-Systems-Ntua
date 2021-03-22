@@ -3,6 +3,7 @@ import select
 import sys
 import pickle
 import errno
+from time import sleep
 from backend import Node
 
 #ip = "192.168.0.2"
@@ -126,6 +127,7 @@ def main_loop():
 			else:
 				[[peer_id, count, code], info] = receive(notified_socket)
 				# check for new successor
+				# print([[peer_id, count, code], info])
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
 					node.update_dht(succ[0], succ[1], succ[2], code)
@@ -156,7 +158,10 @@ def main_loop():
 			print()
 			value = sys.stdin.readline().rstrip()
 			if str(value) == "depart":
+				print(node.get_successor())
+				print(node.get_predecessor())
 				node.depart()
+				# sleep(1)
 				return
 			elif str(value).lower().startswith("insert"):
 				temporary = str(value).split(',')
