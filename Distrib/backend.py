@@ -1,6 +1,7 @@
 import socket
 import pickle
 from hashlib import sha1
+from time import sleep
 
 class Node():
 	def __init__(self, ip_address, port, is_bootstrap):
@@ -83,44 +84,44 @@ class Node():
 		return self.counter
 
 	def insert(self, key, value):
-			#one node case
-			if self.get_predecessor() == None:
-				if self.check_if_in_data(key):
-					print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
-					self.update_data(key,value)
-					return
-				else:
-					print("I,",self.get_id(),"just inserted data",key,"with hash id",self.hash(key))
-					self.insert_data(key,value,self.get_k())
-					return
-
-			pred = self.get_predecessor()[0]
-			me = self.get_id()
-			hashkey = self.hash(key)
-			if ( (me >= hashkey and pred < hashkey) or (me < pred and (( me <= hashkey and pred < hashkey ) or (hashkey <= me and hashkey < pred)))):
-				if self.check_if_in_data(key):
-					print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
-					self.update_data(key,value)
-					if self.get_k() != 1:
-						msg = [[self.get_id(), self.get_counter(), 6],[key, value, self.get_ip_address(), self.get_port(), self.get_id(), self.get_k() - 1]]
-						msg = pickle.dumps(msg, -1)
-						self.get_successor()[2].send(msg)
-					return
-				else:
-					print("I,",self.get_id(),"just inserted data",key,"with hash id",self.hash(key))
-					self.insert_data(key,value,self.get_k())
-					if self.get_k() != 1:
-						msg = [[self.get_id(), self.get_counter(), 6],[key, value, self.get_ip_address(), self.get_port(), self.get_id(), self.get_k() - 1]]
-						msg = pickle.dumps(msg, -1)
-						# print(self.get_successor())
-						self.get_successor()[2].send(msg)
-					return
-			else:
-				print("Found insert for",self.hash(key),", passing it forward")
-				msg = [[self.get_id(), self.get_counter(), 4],[key,value]]
-				msg = pickle.dumps(msg, -1)
-				self.get_successor()[2].send(msg)
+		#one node case
+		if self.get_predecessor() == None:
+			if self.check_if_in_data(key):
+				print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
+				self.update_data(key,value)
 				return
+			else:
+				print("I,",self.get_id(),"just inserted data",key,"with hash id",self.hash(key))
+				self.insert_data(key,value,self.get_k())
+				return
+
+		pred = self.get_predecessor()[0]
+		me = self.get_id()
+		hashkey = self.hash(key)
+		if ( (me >= hashkey and pred < hashkey) or (me < pred and (( me <= hashkey and pred < hashkey ) or (hashkey <= me and hashkey < pred)))):
+			if self.check_if_in_data(key):
+				print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
+				self.update_data(key,value)
+				if self.get_k() != 1:
+					msg = [[self.get_id(), self.get_counter(), 6],[key, value, self.get_ip_address(), self.get_port(), self.get_id(), self.get_k() - 1]]
+					msg = pickle.dumps(msg, -1)
+					self.get_successor()[2].send(msg)
+				return
+			else:
+				print("I,",self.get_id(),"just inserted data",key,"with hash id",self.hash(key))
+				self.insert_data(key,value,self.get_k())
+				if self.get_k() != 1:
+					msg = [[self.get_id(), self.get_counter(), 6],[key, value, self.get_ip_address(), self.get_port(), self.get_id(), self.get_k() - 1]]
+					msg = pickle.dumps(msg, -1)
+					# print(self.get_successor())
+					self.get_successor()[2].send(msg)
+				return
+		else:
+			print("Found insert for",self.hash(key),", passing it forward")
+			msg = [[self.get_id(), self.get_counter(), 4],[key,value]]
+			msg = pickle.dumps(msg, -1)
+			self.get_successor()[2].send(msg)
+			return
 
 	def replica_insert(self,key,value,peer_ip,peer_port,peer_id,currentk):
 		if currentk != 0 and self.get_id() != peer_id:
@@ -324,7 +325,6 @@ class Node():
 			msg = [[self.get_id(), self.get_counter(), 0], [[self.ip_address, self.port, self.get_id()], [self.ip_address, self.port, self.get_id()], [self.get_k(), self.get_consistency()]]]
 			msg = pickle.dumps(msg, -1)
 			peer_socket.send(msg)
-
 		# if we have just been informed about a new predecessor
 		elif (self.in_between_pred(peer_id) and code == 1) or code == 3:
 			former_predecessor = self.get_predecessor()
@@ -399,9 +399,16 @@ class Node():
 		successor = self.get_successor()
 		msg = [[self.get_id(), self.get_counter(), 2], [[self.ip_address, self.port, self.get_id()], [successor[1][0], successor[1][1], successor[0]]]]
 		msg = pickle.dumps(msg, -1)
+		# successor[2].close()
+		if self.get_successor()[0] == self.get_predecessor()[0]:
+			print("Only one Remaining is Bootstrap")
+			return
 		self.get_predecessor()[2].send(msg)
-		for socket in self.get_sockets():
-			self.remove_socket(socket)
+
+		# self.get_predecessor()[2].close()
+
+		# for socket in self.get_sockets():
+		# 	self.remove_socket(socket)
 		print(f"sending message to {self.get_predecessor()[2]}")
 
 	def create_socket(self, ip_address, port):

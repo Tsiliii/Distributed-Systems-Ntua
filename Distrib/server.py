@@ -159,6 +159,7 @@ def main_loop():
 			value = sys.stdin.readline().rstrip()
 			if str(value) == "depart":
 				node.depart()
+				return
 			elif str(value).lower().startswith("insert"):
 				temporary = str(value).split(',')
 				if (len(temporary) > 2):
@@ -168,8 +169,7 @@ def main_loop():
 			elif str(value).lower().startswith("delete"):
 				temporary = str(value).split(',')
 				if (len(temporary) > 1):
-					key = temporary.strip()
-					some_value = temporary[1].strip()
+					key = temporary[1].strip()
 					node.delete(key)
 			elif str(value).lower().startswith("query"):
 				temporary = str(value).split(',')

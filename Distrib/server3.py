@@ -126,7 +126,6 @@ def main_loop():
 			else:
 				[[peer_id, count, code], info] = receive(notified_socket)
 				# check for new successor
-				print(code,info)
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
 					node.update_dht(succ[0], succ[1], succ[2], code)
@@ -158,6 +157,7 @@ def main_loop():
 			value = sys.stdin.readline().rstrip()
 			if str(value) == "depart":
 				node.depart()
+				return
 			elif str(value).lower().startswith("insert"):
 				temporary = str(value).split(',')
 				if (len(temporary) > 2):
@@ -167,8 +167,7 @@ def main_loop():
 			elif str(value).lower().startswith("delete"):
 				temporary = str(value).split(',')
 				if (len(temporary) > 1):
-					key = temporary.strip()
-					some_value = temporary[1].strip()
+					key = temporary[1].strip()
 					node.delete(key)
 			elif str(value).lower().startswith("query"):
 				temporary = str(value).split(',')

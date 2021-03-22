@@ -57,6 +57,7 @@ def main_loop(node):
 
 		# iterate over notified sockets
 		for notified_socket in read_sockets:
+			# print(notified_socket)
 			node.set_counter()
 			# if notified socket is a server socket - new connection, accept it
 			print()
@@ -75,9 +76,11 @@ def main_loop(node):
 			else:
 				[[peer_id, count, code], info] = receive(notified_socket)
 				# check for new successor
+				# print([[peer_id, count, code], info])
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
 					node.update_dht(succ[0], succ[1], succ[2], code)
+					print("depart")
 				elif code == 1:
 					[pred_ip, pred_port] = info
 					node.update_dht(pred_ip, pred_port, peer_id, code=1, peer_socket=notified_socket)
@@ -109,7 +112,8 @@ def main_loop(node):
 			print()
 			value = sys.stdin.readline().rstrip()
 			if str(value) == "depart":
-				node.depart()
+				# node.depart()
+				print("This is the bootstrap node you probably shouldn't depart!!\nIf you are sure use Ctrl-C")
 			elif str(value).lower().startswith("insert"):
 				temporary = str(value).split(',')
 				if (len(temporary) > 2):
@@ -119,8 +123,7 @@ def main_loop(node):
 			elif str(value).lower().startswith("delete"):
 				temporary = str(value).split(',')
 				if (len(temporary) > 1):
-					key = temporary.strip()
-					some_value = temporary[1].strip()
+					key = temporary[1].strip()
 					node.delete(key)
 			elif str(value).lower().startswith("query"):
 				temporary = str(value).split(',')
