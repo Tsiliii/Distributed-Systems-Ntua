@@ -123,9 +123,11 @@ def main_loop(node):
 					some_value = temporary[1].strip()
 					node.delete(key)
 			elif str(value).lower().startswith("query"):
-				starting_node_ID = node.get_id()
-				key = str(value)[7:]
-				node.query(key, starting_node_ID)
+				temporary = str(value).split(',')
+				if (len(temporary) > 1):
+					starting_node_ID = node.get_id()
+					key = temporary[1].strip()
+					node.query(key, starting_node_ID)
 			else:
 				print(f"You entered: {value}, did you make a mistake?")
 			print()

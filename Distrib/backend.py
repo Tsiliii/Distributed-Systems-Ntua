@@ -83,12 +83,8 @@ class Node():
 		return self.counter
 
 	def insert(self, key, value):
-			pred = self.get_predecessor()[0]
-			me = self.get_id()
-			hashkey = self.hash(key)
-
 			#one node case
-			if me == pred:
+			if self.get_predecessor() == None:
 				if self.check_if_in_data(key):
 					print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
 					self.update_data(key,value)
@@ -98,7 +94,9 @@ class Node():
 					self.insert_data(key,value,self.get_k())
 					return
 
-			# print(pred,hashkey,me)
+			pred = self.get_predecessor()[0]
+			me = self.get_id()
+			hashkey = self.hash(key)
 			if ( (me >= hashkey and pred < hashkey) or (me < pred and (( me <= hashkey and pred < hashkey ) or (hashkey <= me and hashkey < pred)))):
 				if self.check_if_in_data(key):
 					print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
@@ -198,6 +196,17 @@ class Node():
 						return
 
 	def delete(self, key):
+			#one node case
+			if self.get_predecessor() == None:
+				if self.check_if_in_data(key):
+					print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
+					self.update_data(key,value)
+					return
+				else:
+					print("I,",self.get_id(),"just inserted data",key,"with hash id",self.hash(key))
+					self.insert_data(key,value,self.get_k())
+					return
+
 			pred = self.get_predecessor()[0]
 			me = self.get_id()
 			hashkey = self.hash(key)
@@ -251,13 +260,13 @@ class Node():
 		# return port%100
 		# assumes ip_address is a string and port is an int
 		digest = sha1((ip_address+':'+str(port)).encode('ascii')).hexdigest()
-		return int(str(int(digest, 16))[:4])
 		# return int(digest, 16)
+		return int(str(int(digest, 16))[:4])
 
 	def hash(self, key):
 		digest = sha1((str(key)).encode('ascii')).hexdigest()
-		return int(str(int(digest, 16))[:4])
 		# return int(digest, 16)
+		return int(str(int(digest, 16))[:4])
 
 	def add_socket(self, socket):
 		if socket not in self.socket_list:
@@ -351,7 +360,7 @@ class Node():
 			elif code == 1:
 				msg = [[self.get_id(), self.get_counter(), 1], [self.get_ip_address(), self.get_port()]]
 			elif code == 2:
-				msg = [[self.get_id(), self.get_counter(), 3], [[self.ip_address, self.port, self.get_id()], [self.ip_address, self.port, self.get_id()], [self.get_k(), self.get_consistency()]]]
+				msg = [[self.get_id(), self.get_counter(), 3], [[self.ip_address, self.port, self.get_id()], [self.ip_address, self.port, self.get_id()]]]
 			msg = pickle.dumps(msg, -1)
 			self.get_successor()[2].send(msg)
 			print("found_successor: ", peer_id)
