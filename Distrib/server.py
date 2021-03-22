@@ -159,25 +159,21 @@ def main_loop():
 			value = sys.stdin.readline().rstrip()
 			if str(value) == "depart":
 				node.depart()
-				# return 0
-
 			elif str(value).lower().startswith("insert"):
 				temporary = str(value).split(',')
 				if (len(temporary) > 2):
 					key = temporary[1].strip()
 					some_value = temporary[2].strip()
 					node.insert(key,some_value)
-
 			elif str(value).lower().startswith("delete"):
 				temporary = str(value).split(',')
-				if (len(temporary) > 1)
+				if (len(temporary) > 1):
 					key = temporary.strip()
 					some_value = temporary[1].strip()
 					node.delete(key)
-
 			elif str(value).lower().startswith("query"):
 				starting_node_ID = node.get_id()
-				key = str(value)[6:-1]
+				key = str(value)[7:]
 				node.query(key, starting_node_ID)
 			else:
 				print(f"You entered: {value}, did you make a mistake?")
