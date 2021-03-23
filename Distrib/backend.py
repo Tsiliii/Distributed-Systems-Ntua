@@ -176,6 +176,7 @@ class Node():
 							return
 						else:
 							made_a_round_trip = True
+					print("The key wasn't found on this node, passing the query forward")
 					msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, made_a_round_trip]]
 					msg = pickle.dumps(msg, -1)
 					succ[2].send(msg)
@@ -189,6 +190,7 @@ class Node():
 							return
 						else:
 							made_a_round_trip = True
+					print("The key wasn't found on this node, passing the query forward")
 					msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, made_a_round_trip]]
 					msg = pickle.dumps(msg, -1)
 					succ[2].send(msg)
@@ -196,6 +198,7 @@ class Node():
 				else:
 					if self.get_data_replica_counter(key) != 1:
 						succ = self.get_successor()
+						print("The key was found on this node, but it's not the latest node, passing the query forward")
 						msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID]]
 						msg = pickle.dumps(msg, -1)
 						succ[2].send(msg)
