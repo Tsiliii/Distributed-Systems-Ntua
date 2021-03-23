@@ -141,10 +141,11 @@ class Node():
 
 	def query(self, key, starting_node_ID, made_a_round_trip=False):
 		if key == "*":
-			print("Key => Value pairs for node: ",self.get_id())
 			tuples = self.get_data(key)
-			for x in tuples.keys():
-				print(x +" => " + tuples[x])
+			if tuples:
+				print("Key => Value pairs for node: ",self.get_id())
+				for x in tuples.keys():
+					print(x +" => " + tuples[x])
 			succ = self.get_successor()
 			[ID, address, socket] = succ
 			# if ID == starting_node_ID
@@ -402,6 +403,16 @@ class Node():
 		msg = [[self.get_id(), self.get_counter(), 2], [[self.ip_address, self.port, self.get_id()], [successor[1][0], successor[1][1], successor[0]]]]
 		msg = pickle.dumps(msg, -1)
 
+		# Send the data that this node has to the successor:
+		data_to_be_sent = self.data
+		if data_to_be_sent:
+			counters_to_be_sent = self.replica_counter
+			departing_node_id = self.get_id()
+			msg = [[self.get_id(), self.get_counter(), 9], [data_to_be_sent, counters_to_be_sent, departing_node_id]]
+			msg.pickle.dumps(msg,-1)
+			self.get_successor()[2].send(msg)
+
+
 		if self.get_successor()[0] == self.get_predecessor()[0]:
 			self.get_predecessor()[2].send(msg)
 			print("Only node remaining is Bootstrap")
@@ -414,6 +425,31 @@ class Node():
 		for some_socket in self.get_sockets():
 			self.remove_socket(some_socket)
 		print(f"sending message to {self.get_predecessor()[2]}")
+
+	def update_data_on_insert():
+		pass
+
+
+	def update_data_on_delete(self, data_of_departing_node, counters_of_departing_node, departing_node_id):
+		data_to_be_passed_on = {}
+		counters_to_be_passed_on = {}
+		for key in data_of_departing_node.keys():
+			if counters_of_departing_node[key] == 1:
+				self.insert(key, data_of_departing_node[key])
+			else:
+				# update the key's value??
+				self.insert(key, data_of_departing_node[key])
+				# update the replica counter
+				self.replica_counter[key] += 1
+				# pass on the data that need to be passed on?
+				data_to_be_passed_on[key] = data_of_departing_node[key]
+				counters_to_be_passed_on[key] = counters_of_departing_node[key] - 1 
+		# make sure that there is something to pass on, and that we haven't made a full circle
+		if data_to_be_passed_on, and self.get_successor()[0] != departing_node_id:
+			msg = [[self.get_id(), self.get_counter(), 9], [data_to_be_passed_on, counters_to_be_passed_on, departing_node_id]]
+			msg.pickle.dumps(msg,-1)
+			self.get_successor()[2].send(msg)
+		return 
 
 	def create_socket(self, ip_address, port):
 		print(f"creating socket for address {ip_address} and port {port}")

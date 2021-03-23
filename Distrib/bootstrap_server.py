@@ -105,7 +105,12 @@ def main_loop(node):
 				elif code == 8:
 					[key, starting_node_ID, round_trip] = info
 					node.query(key, starting_node_ID, made_a_round_trip = round_trip)
-			print()
+				#update data on predecessor departing:
+				#update data on predecessor departing:
+				elif code == 9:
+					[data_to_be_recieved, counters_to_be_recieved, departing_node_id] = info
+					node.update_data_on_delete(data_to_be_recieved, counters_to_be_recieved, departing_node_id)
+				print()
 
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]
