@@ -54,6 +54,12 @@ class Node():
 	def get_k(self):
 		return self.k
 
+	def get_data_replica_counter(self,key):
+		return self.replica_counter[key]
+
+	def incr_data_replica_counter(self,key):
+		self.replica_counter[key] += 1
+
 	def get_data(self, key):
 		if key == "*":
 			return self.data
@@ -188,7 +194,7 @@ class Node():
 					succ[2].send(msg)
 					return
 				else:
-					if self.get_replica_counter(key) != 1:
+					if self.get_data_replica_counter(key) != 1:
 						succ = self.get_successor()
 						msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID]]
 						msg = pickle.dumps(msg, -1)
@@ -395,18 +401,35 @@ class Node():
 		print(f"Server {self.get_id()} with address {self.ip_address} and port {self.port} just joined")
 
 	def depart(self):
+		# Send the data that this node has to the successor:
+		node_data = self.get_data("*")
+		if node_data:
+			if self.get_k() != 1:
+				sent_data = {}
+				sent_key = set()
+				for key, value in node_data.items():
+					if self.get_data_replica_counter(key) == 1:
+						sent_data[key] = value
+					else:
+						sent_key.add(key)
+				departing_node_id = self.get_id()
+				msg = [[self.get_id(), self.get_counter(), 9], [sent_data, sent_key, departing_node_id]]
+				msg = pickle.dumps(msg,-1)
+				self.get_successor()[2].send(msg)
+				sleep(1)
+			else:
+				sent_data = node_data
+				sent_key = set()
+				departing_node_id = self.get_id()
+				msg = [[self.get_id(), self.get_counter(), 9], [sent_data, sent_key, departing_node_id]]
+				msg = pickle.dumps(msg,-1)
+				self.get_successor()[2].send(msg)
+				sleep(1)
+
+		# network adjustments
 		successor = self.get_successor()
 		msg = [[self.get_id(), self.get_counter(), 2], [[self.ip_address, self.port, self.get_id()], [successor[1][0], successor[1][1], successor[0]]]]
 		msg = pickle.dumps(msg, -1)
-
-		# Send the data that this node has to the successor:
-		data_to_be_sent = self.data
-		if data_to_be_sent:
-			counters_to_be_sent = self.replica_counter
-			departing_node_id = self.get_id()
-			msg = [[self.get_id(), self.get_counter(), 9], [data_to_be_sent, counters_to_be_sent, departing_node_id]]
-			msg.pickle.dumps(msg,-1)
-			self.get_successor()[2].send(msg)
 
 		# case
 		if self.get_successor()[0] == self.get_predecessor()[0]:
@@ -416,41 +439,45 @@ class Node():
 			self.get_successor()[2].close()
 			return
 
-		self.get_predecessor()[2].send(msg)
-		self.get_predecessor()[2].shutdown(socket.SHUT_RDWR)
-		self.get_predecessor()[2].close()
-		sleep(.1)
-		self.get_successor()[2].shutdown(socket.SHUT_RDWR)
-		self.get_successor()[2].close()
+		# self.get_predecessor()[2].send(msg)
+		# self.get_predecessor()[2].shutdown(socket.SHUT_RDWR)
+		# self.get_predecessor()[2].close()
+		# sleep(.1)
+		# self.get_successor()[2].shutdown(socket.SHUT_RDWR)
+		# self.get_successor()[2].close()
 
 		for i,sock in enumerate(self.get_sockets()):
 			if i != 0:
 				self.remove_socket(self.get_sockets()[i])
 		print(f"sending message to {self.get_predecessor()[2]}")
 
-	def update_data_on_insert():
+	def update_data_on_join():
 		pass
 
-	def update_data_on_delete(self, data_of_departing_node, counters_of_departing_node, departing_node_id):
-		data_to_be_passed_on = {}
-		counters_to_be_passed_on = {}
-		for key in data_of_departing_node.keys():
-			if counters_of_departing_node[key] == 1:
-				self.insert(key, data_of_departing_node[key])
-			else:
-				# update the key's value??
-				self.insert(key, data_of_departing_node[key])
-				# update the replica counter
-				self.replica_counter[key] += 1
-				# pass on the data that need to be passed on?
-				data_to_be_passed_on[key] = data_of_departing_node[key]
-				counters_to_be_passed_on[key] = counters_of_departing_node[key] - 1
-		# make sure that there is something to pass on, and that we haven't made a full circle
-		if data_to_be_passed_on and self.get_successor()[0] != departing_node_id:
-			msg = [[self.get_id(), self.get_counter(), 9], [data_to_be_passed_on, counters_to_be_passed_on, departing_node_id]]
-			msg.pickle.dumps(msg,-1)
-			self.get_successor()[2].send(msg)
-		return
+	def update_data_on_depart(self, sent_data, sent_key, departing_node_id):
+		if self.get_k() != 1:
+			if sent_data or sent_key:
+				for key,value in sent_data.items():
+					self.insert_data(key,value,1)
+				sent_data = {}
+				new_sent_key = {}
+				for key in sent_key:
+					current_counter = self.get_data_replica_counter(key)
+					if current_counter == 1:
+						sent_data[key] = self.get_data(key)
+					else:
+						new_sent_key.add(key)
+					self.incr_data_replica_counter(key)
+
+			if departing_node_id != self.get_successor()[2] and (sent_data or new_sent_key):
+				msg = [[self.get_id(), self.get_counter(), 9], [sent_data, new_sent_key, departing_node_id]]
+				msg = pickle.dumps(msg,-1)
+				self.get_successor()[2].send(msg)
+			return
+		else:
+			for key, value in sent_data.items():
+				self.insert_data(key,value,1)
+			return
 
 	def create_socket(self, ip_address, port):
 		print(f"creating socket for address {ip_address} and port {port}")

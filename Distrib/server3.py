@@ -150,6 +150,10 @@ def main_loop():
 				elif code == 8:
 					[key, starting_node_ID, round_trip] = info
 					node.query(key, starting_node_ID, made_a_round_trip = round_trip)
+				#update data on predecessor departing:
+				elif code == 9:
+					[sent_data, send_key, departing_node_id] = info
+					node.update_data_on_depart(sent_data, send_key, departing_node_id)
 				print()
 
 		# check for input, set time interval to 0 for non-blocking

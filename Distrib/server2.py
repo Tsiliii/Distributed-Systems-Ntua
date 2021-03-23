@@ -152,8 +152,8 @@ def main_loop():
 					node.query(key, starting_node_ID, made_a_round_trip = round_trip)
 				#update data on predecessor departing:
 				elif code == 9:
-					[data_to_be_recieved, counters_to_be_recieved, departing_node_id] = info
-					node.update_data_on_delete(data_to_be_recieved, counters_to_be_recieved, departing_node_id)
+					[sent_data, send_key, departing_node_id] = info
+					node.update_data_on_depart(sent_data, send_key, departing_node_id)
 				print()
 
 		# check for input, set time interval to 0 for non-blocking
@@ -165,7 +165,7 @@ def main_loop():
 				print(node.get_successor())
 				print(node.get_predecessor())
 				node.depart()
-				return
+				# return
 			elif str(value).lower().startswith("insert"):
 				temporary = str(value).split(',')
 				if (len(temporary) > 2):
