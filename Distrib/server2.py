@@ -71,7 +71,8 @@ def connect_to_dht():
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				predecessor_socket, _ = node.get_sockets()[0].accept()
 				# wait until info about predecessor and successor arrives
-				[_, [pred, succ, [answer_k, answer_consistency]]] = receive(predecessor_socket)
+				# [_, [pred, succ, [answer_k, answer_consistency]]] = receive(predecessor_socket)
+				[_, [pred, succ]] = receive(predecessor_socket)
 				# set consistency and k
 				node.set_consistency(answer_consistency)
 				node.set_k(answer_k)
@@ -105,6 +106,17 @@ def receive(socket):
 		except Exception as e:
 			print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
 			sys.exit()
+
+"""
+	This function runs after the node is connected to the DHT, and needs to be updated on the 
+	data it must have. It needs to connect to the successor and (possibly) shift the data 
+	left-wise.
+"""
+def get_data():
+	msg = [[node.get_id(), node.get_counter(), 10], [node.get_id(), {}, {}]]
+	msg = pickle.dumps(msg, -1)
+	client_socket.send(msg)
+
 
 def main_loop():
 	while True:
@@ -154,6 +166,9 @@ def main_loop():
 				elif code == 9:
 					[sent_data, send_key, departing_node_id] = info
 					node.update_data_on_depart(sent_data, send_key, departing_node_id)
+				elif code == 10:
+					[new_node_ID, data_to_be_updated, counters_to_be_updated] = info
+					node.update_data_on_join(new_node_ID, data_to_be_updated, counters_to_be_updated)
 				print()
 
 		# check for input, set time interval to 0 for non-blocking
@@ -183,12 +198,17 @@ def main_loop():
 					starting_node_ID = node.get_id()
 					key = temporary[1].strip()
 					node.query(key, starting_node_ID)
-
 			else:
 				print(f"You entered: {value}, did you make a mistake?")
 			print()
+		# check all sockkets to be closed if other closed them close them aswell
+
 
 if __name__ == '__main__':
+	# print(f"Arguments count: {len(sys.argv)}")
+	# for i, arg in enumerate(sys.argv):
+	# 	print(f"Argument {i:>6}: {arg}")
 	create_server_socket()
 	connect_to_dht()
+	get_data()
 	main_loop()

@@ -462,8 +462,17 @@ class Node():
 				self.remove_socket(self.get_sockets()[i])
 		print(f"sending message to {self.get_predecessor()[2]}")
 
-	def update_data_on_join():
-		pass
+	def update_data_on_join(self, data_to_be_updated, counters_to_be_updated):
+		# if data and counters sets are empty, that means the message was sent from the node that just joined:
+		if (not data_to_be_updated) and (not counters_to_be_updated):
+			node_data = self.get_data("*")
+			node_counters = self.replica_counter
+			# for each key, there are 3 possibilities:
+			# 1) the node that just joined must be the owner of the data
+			# 2) the node that just joined must have a replica of the data
+			# 3) the node that just joined must not be the owner of the data.
+			for key, value in node_data.items():
+				if node_counters[key] != self.k
 
 	def update_data_on_depart(self, sent_data, sent_key, departing_node_id):
 		if self.get_k() != 1:
