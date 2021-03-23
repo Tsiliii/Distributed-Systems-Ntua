@@ -8,7 +8,7 @@ from backend import Node
 
 #ip = "192.168.0.1"
 ip = "127.0.0.1"
-port = 9914
+port = 9910
 recv_length = 1024
 
 node = Node(ip, port, True)
@@ -48,6 +48,8 @@ def receive(socket):
 			continue
 		except Exception as e:
 			print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
+			print(socket.fileno())
+			print(str(e))
 			sys.exit()
 
 def main_loop(node):
@@ -57,7 +59,10 @@ def main_loop(node):
 
 		# iterate over notified sockets
 		for notified_socket in read_sockets:
-
+			print(node.get_successor())
+			print(node.get_predecessor())
+			print(notified_socket)
+			print()
 			node.set_counter()
 			# if notified socket is a server socket - new connection, accept it
 			if notified_socket == node.get_sockets()[0]:

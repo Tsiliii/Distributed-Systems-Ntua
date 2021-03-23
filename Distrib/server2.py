@@ -6,11 +6,11 @@ import errno
 from backend import Node
 
 #ip = "192.168.0.2"
-ip = "127.0.0.1"
-port = 9913
+ip = "127.0.0.2"
+port = 9914
 bootstrap_ip = "127.0.0.1"
 #bootstrap_ip = "192.168.0.1"
-bootstrap_port = 9914
+bootstrap_port = 9910
 recv_length = 1024
 
 node = Node(ip, port, False)
@@ -104,6 +104,8 @@ def receive(socket):
 
 		except Exception as e:
 			print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
+			print(socket.fileno())
+			print(str(e))
 			sys.exit()
 
 def main_loop():
@@ -113,6 +115,8 @@ def main_loop():
 
 		# iterate over notified ones
 		for notified_socket in read_sockets:
+			print(node.get_successor())
+			print(node.get_predecessor())
 			print()
 			if notified_socket == node.get_sockets()[0]:
 				# the returned value is a pair (conn, address) where conn is a new socket object usable to send and

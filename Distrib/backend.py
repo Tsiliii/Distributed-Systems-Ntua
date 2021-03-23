@@ -325,7 +325,7 @@ class Node():
 			self.add_socket(peer_socket)
 			# let second node know what's up
 			print("2nd node entered: ", peer_id)
-			msg = [[self.get_id(), self.get_counter(), 0], [[self.ip_address, self.port, self.get_id()], [self.ip_address, self.port, self.get_id()], [self.get_k(), self.get_consistency()]]]
+			msg = [[self.get_id(), self.get_counter(), 0], [[self.get_ip_address(), self.get_port(), self.get_id()], [self.get_ip_address(), self.get_port(), self.get_id()], [self.get_k(), self.get_consistency()]]]
 			msg = pickle.dumps(msg, -1)
 			peer_socket.send(msg)
 
@@ -364,18 +364,18 @@ class Node():
 			else:
 				self.set_successor([peer_id, [peer_ip_address, peer_port], self.get_predecessor()[2]])
 			if code == 0:
-				msg = [[self.get_id(), self.get_counter(), 0], [[self.ip_address, self.port, self.get_id()], [former_successor[1][0], former_successor[1][1], former_successor[0]] , [self.get_k(), self.get_consistency()]]]
+				msg = [[self.get_id(), self.get_counter(), 0], [[self.get_ip_address(), self.get_port(), self.get_id()], [former_successor[1][0], former_successor[1][1], former_successor[0]] , [self.get_k(), self.get_consistency()]]]
 			elif code == 1:
 				msg = [[self.get_id(), self.get_counter(), 1], [self.get_ip_address(), self.get_port()]]
 			elif code == 2:
-				msg = [[self.get_id(), self.get_counter(), 3], [[self.ip_address, self.port, self.get_id()], [self.ip_address, self.port, self.get_id()]]]
+				msg = [[self.get_id(), self.get_counter(), 3], [[self.get_ip_address(), self.get_port(), self.get_id()], [self.get_ip_address(), self.get_port(), self.get_id()]]]
 			msg = pickle.dumps(msg, -1)
 			self.get_successor()[2].send(msg)
 			print("found_successor: ", peer_id)
 
 		# if it is not the successor of the current node
 		else:
-			msg = [[self.get_id(), self.get_counter(), 0], [[self.ip_address, self.port, self.get_id()], [peer_ip_address, peer_port, peer_id]]]
+			msg = [[self.get_id(), self.get_counter(), 0], [[self.get_ip_address(), self.get_port(), self.get_id()], [peer_ip_address, peer_port, peer_id]]]
 			msg = pickle.dumps(msg, -1)
 			print("node:", peer_id)
 			self.get_successor()[2].send(msg)
@@ -401,7 +401,7 @@ class Node():
 			msg = [[self.get_id(), self.get_counter(), 1], [self.get_ip_address(), self.get_port()]]
 			msg = pickle.dumps(msg, -1)
 			self.get_successor()[2].send(msg)
-		print(f"Server {self.get_id()} with address {self.ip_address} and port {self.port} just joined")
+		print(f"Server {self.get_id()} with address {self.get_ip_address()} and port {self.get_port()} just joined")
 
 	def depart(self):
 		# Send the data that this node has to the successor:
@@ -431,7 +431,7 @@ class Node():
 
 		# network adjustments
 		successor = self.get_successor()
-		msg = [[self.get_id(), self.get_counter(), 2], [[self.ip_address, self.port, self.get_id()], [successor[1][0], successor[1][1], successor[0]]]]
+		msg = [[self.get_id(), self.get_counter(), 2], [[self.get_ip_address(), self.get_port(), self.get_id()], [successor[1][0], successor[1][1], successor[0]]]]
 		msg = pickle.dumps(msg, -1)
 
 		# case
@@ -443,16 +443,18 @@ class Node():
 			return
 
 		self.get_predecessor()[2].send(msg)
+		print(f"sending message to {self.get_predecessor()[2]}")
+
 		self.get_predecessor()[2].shutdown(socket.SHUT_RDWR)
 		self.get_predecessor()[2].close()
 		sleep(.1)
-		self.get_successor()[2].shutdown(socket.SHUT_RDWR)
-		self.get_successor()[2].close()
+		# self.get_successor()[2].shutdown(socket.SHUT_RDWR)
+		# self.get_successor()[2].close()
+		# sleep(.1)
 
-		for i,sock in enumerate(self.get_sockets()):
-			if i != 0:
-				self.remove_socket(self.get_sockets()[i])
-		print(f"sending message to {self.get_predecessor()[2]}")
+		while (self.get_sockets()):
+			self.remove_socket(self.get_sockets()[0])
+		return
 
 	def update_data_on_join():
 		pass
@@ -485,6 +487,8 @@ class Node():
 	def create_socket(self, ip_address, port):
 		print(f"creating socket for address {ip_address} and port {port}")
 		client_socket = server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		
 		client_socket.connect((ip_address, port))
 		self.set_counter()
 		# set connection to non-blocking state, so .recv() call won't block, just return some exception we'll handle

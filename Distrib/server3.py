@@ -3,15 +3,14 @@ import select
 import sys
 import pickle
 import errno
-from time import sleep
 from backend import Node
 
 #ip = "192.168.0.2"
-ip = "127.0.0.1"
+ip = "127.0.0.2"
 port = 9916
 bootstrap_ip = "127.0.0.1"
 #bootstrap_ip = "192.168.0.1"
-bootstrap_port = 9914
+bootstrap_port = 9910
 recv_length = 1024
 
 node = Node(ip, port, False)
@@ -25,7 +24,11 @@ def create_server_socket():
 
 	server_socket.bind((ip, port))
 	# enable the server to accept connections
-	server_socket.listen()
+	print(server_socket)
+	print("listening")
+	server_socket.listen(2048)
+	print("listened")
+	print(server_socket)
 
 	# list of sockets for select.select()
 	node.add_socket(server_socket)
@@ -102,10 +105,11 @@ def receive(socket):
 				sys.exit()
 			# we just did not receive anything
 			continue
-
-		except Exception as e:
-			print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
-			sys.exit()
+		# except Exception as e:
+		# 	print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
+		# 	print(socket.fileno())
+		# 	print(str(e))
+		# 	sys.exit()
 
 def main_loop():
 	while True:
@@ -114,8 +118,11 @@ def main_loop():
 
 		# iterate over notified ones
 		for notified_socket in read_sockets:
+			print(node.get_successor())
+			print(node.get_predecessor())
 			print()
 			if notified_socket == node.get_sockets()[0]:
+				print(notified_socket)
 				# the returned value is a pair (conn, address) where conn is a new socket object usable to send and
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				peer_socket, peer_address = node.get_sockets()[0].accept()
@@ -147,6 +154,7 @@ def main_loop():
 				elif code == 7:
 					[key, peer_ip, peer_port, peer_id, currentk] = info
 					node.replica_delete(key, peer_ip, peer_port, peer_id, currentk)
+				#query code
 				elif code == 8:
 					[key, starting_node_ID, round_trip] = info
 					node.query(key, starting_node_ID, made_a_round_trip = round_trip)
@@ -165,7 +173,6 @@ def main_loop():
 				print(node.get_successor())
 				print(node.get_predecessor())
 				node.depart()
-				# sleep(1)
 				return
 			elif str(value).lower().startswith("insert"):
 				temporary = str(value).split(',')
@@ -184,12 +191,16 @@ def main_loop():
 					starting_node_ID = node.get_id()
 					key = temporary[1].strip()
 					node.query(key, starting_node_ID)
-
 			else:
 				print(f"You entered: {value}, did you make a mistake?")
 			print()
+		# check all sockkets to be closed if other closed them close them aswell
+
 
 if __name__ == '__main__':
+	# print(f"Arguments count: {len(sys.argv)}")
+	# for i, arg in enumerate(sys.argv):
+	# 	print(f"Argument {i:>6}: {arg}")
 	create_server_socket()
 	connect_to_dht()
 	main_loop()
