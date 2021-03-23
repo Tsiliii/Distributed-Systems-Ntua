@@ -12,6 +12,7 @@ port = 9910
 recv_length = 1024
 
 node = Node(ip, port, True)
+
 def create_server_socket(node):
 	# create a socket that will be used by other nodes when they first connect
 	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -59,9 +60,6 @@ def main_loop(node):
 
 		# iterate over notified sockets
 		for notified_socket in read_sockets:
-			print(node.get_successor())
-			print(node.get_predecessor())
-			print(notified_socket)
 			print()
 			node.set_counter()
 			# if notified socket is a server socket - new connection, accept it

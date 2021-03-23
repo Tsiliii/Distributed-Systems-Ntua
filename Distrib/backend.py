@@ -153,12 +153,12 @@ class Node():
 					print(x +" => " + tuples[x])
 			else:
 				print("Found request for query *, this node has no data")
+			if self.get_predecessor() == None:
+				return
 			succ = self.get_successor()
 			[ID, address, socket] = succ
 			# if ID == starting_node_ID
 			if int(str(ID)[:4]) == starting_node_ID:
-				return
-			if self.get_predecessor() == None:
 				return
 			msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, False]]
 			msg = pickle.dumps(msg, -1)
@@ -170,6 +170,8 @@ class Node():
 					print(key + " => " + self.get_data(key))
 					return
 				else: #That means the node is outside the replication chain, we must find the first node that has it
+					if self.get_predecessor() == None:
+						return
 					succ = self.get_successor()
 					[ID, address, socket] = succ
 					if self.get_id() == starting_node_ID:
@@ -187,6 +189,8 @@ class Node():
 					return
 			elif self.consistency == "linearizability":
 				if not self.check_if_in_data(key):
+					if self.get_predecessor() == None:
+						return
 					succ = self.get_successor()
 					if self.get_id() == starting_node_ID:
 						if made_a_round_trip:
@@ -325,7 +329,11 @@ class Node():
 		return (x < successor_id and successor_id < id) or (successor_id < id and id < x) or (id < x and x < successor_id)
 
 	def update_dht(self, peer_ip_address, peer_port, peer_id, code, peer_socket=None):
-		# code = 1 only in the case when this node is the successor
+		# code = 0 until new node finds its pred
+		# code = 1 sent to new node successor (messaged from new node)
+		# code = 2 departed node pred
+		# code = 3 departed node succ (messaged from departed node pred)
+
 		# second node entered
 		if self.is_bootstrap and self.get_successor() == None:
 			self.set_successor([peer_id, [peer_ip_address, peer_port], peer_socket])
@@ -343,6 +351,8 @@ class Node():
 			# remove socket only node to be added is not the third one
 			if former_predecessor[0] != self.get_successor()[0]:
 				self.remove_socket(former_predecessor[2])
+				former_predecessor[2].shutdown(socket.SHUT_RDWR)
+				former_predecessor[2].close()
 			if peer_id != self.get_successor()[0]:
 				self.add_socket(peer_socket)
 				self.set_predecessor([peer_id, [peer_ip_address, peer_port], peer_socket])
@@ -353,17 +363,24 @@ class Node():
 		# if it is the successor of the current node
 		elif self.in_between_succ(peer_id) or code == 2:
 			former_successor = self.get_successor()
+			if code == 2 and self.get_id() != peer_id:
+				former_successor[2].shutdown(socket.SHUT_RDWR)
+				former_successor[2].close()
+
 			# remove socket only node to be added is not the third one
 			if former_successor[0] != self.get_predecessor()[0]:
 				self.remove_socket(former_successor[2])
 			if code == 2 and self.is_bootstrap and self.get_id() == peer_id: # bootstrap is alone
 				print("I am all alone in this world yet again")
-				for i,sock in enumerate(self.get_sockets()):
-					if i != 0:
-						self.remove_socket(self.get_sockets()[i])
+				while (len(self.get_sockets()) > 1):
+					to_be_killed = self.get_sockets()[1]
+					self.remove_socket(self.get_sockets()[1])
+					to_be_killed.shutdown(socket.SHUT_RDWR)
+					to_be_killed.close()
 				self.set_predecessor(None)
 				self.set_successor(None)
 				return
+
 			if peer_id != self.get_predecessor()[0]:   # checking if pred and succ is the same node
 				if peer_socket == None:
 					peer_socket = self.create_socket(peer_ip_address, peer_port)
@@ -394,6 +411,7 @@ class Node():
 		if self.compute_id(pred[0], pred[1]) == succ[2]:
 			self.set_predecessor([self.compute_id(pred[0], pred[1]), [pred[0], pred[1]], pred[2]])
 			self.set_successor([self.compute_id(pred[0], pred[1]), [pred[0], pred[1]], pred[2]])
+
 		elif bootstrap_socket == None:
 			self.set_predecessor([self.compute_id(pred[0], pred[1]), [pred[0], pred[1]], pred[2]])
 			new_successor_socket = self.create_socket(succ[0], succ[1])
@@ -402,6 +420,7 @@ class Node():
 			msg = [[self.get_id(), self.get_counter(), 1], [self.get_ip_address(), self.get_port()]]
 			msg = pickle.dumps(msg, -1)
 			self.get_successor()[2].send(msg)
+
 		else:
 			self.set_predecessor([self.compute_id(pred[0], pred[1]), [pred[0], pred[1]], pred[2]])
 			self.set_successor([succ[2], [succ[0], succ[1]], bootstrap_socket])
@@ -456,9 +475,9 @@ class Node():
 		self.get_predecessor()[2].shutdown(socket.SHUT_RDWR)
 		self.get_predecessor()[2].close()
 		sleep(.1)
-		# self.get_successor()[2].shutdown(socket.SHUT_RDWR)
-		# self.get_successor()[2].close()
-		# sleep(.1)
+		self.get_successor()[2].shutdown(socket.SHUT_RDWR)
+		self.get_successor()[2].close()
+		sleep(.1)
 
 		while (self.get_sockets()):
 			self.remove_socket(self.get_sockets()[0])
@@ -474,7 +493,8 @@ class Node():
 			# 2) the node that just joined must have a replica of the data
 			# 3) the node that just joined must not be the owner of the data.
 			for key, value in node_data.items():
-				if node_counters[key] != self.k
+				if node_counters[key] != self.get_k():
+					return
 
 	def update_data_on_depart(self, sent_data, sent_key, departing_node_id):
 		if self.get_k() != 1:
@@ -495,8 +515,10 @@ class Node():
 				msg = [[self.get_id(), self.get_counter(), 9], [sent_data, new_sent_key, departing_node_id]]
 				msg = pickle.dumps(msg,-1)
 				self.get_successor()[2].send(msg)
+			print("Someone left, i am filling up on leftovers")
 			return
 		else:
+			print("Someone left, i am filling up on leftovers")
 			for key, value in sent_data.items():
 				self.insert_data(key,value,1)
 			return
@@ -505,7 +527,7 @@ class Node():
 		print(f"creating socket for address {ip_address} and port {port}")
 		client_socket = server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		
+
 		client_socket.connect((ip_address, port))
 		self.set_counter()
 		# set connection to non-blocking state, so .recv() call won't block, just return some exception we'll handle

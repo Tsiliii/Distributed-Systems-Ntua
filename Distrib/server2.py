@@ -110,11 +110,12 @@ def receive(socket):
 			sys.exit()
 
 """
-	This function runs after the node is connected to the DHT, and needs to be updated on the 
-	data it must have. It needs to connect to the successor and (possibly) shift the data 
+	This function runs after the node is connected to the DHT, and needs to be updated on the
+	data it must have. It needs to connect to the successor and (possibly) shift the data
 	left-wise.
 """
 def get_data():
+	return
 	msg = [[node.get_id(), node.get_counter(), 10], [node.get_id(), {}, {}]]
 	msg = pickle.dumps(msg, -1)
 	client_socket.send(msg)
@@ -127,8 +128,6 @@ def main_loop():
 
 		# iterate over notified ones
 		for notified_socket in read_sockets:
-			print(node.get_successor())
-			print(node.get_predecessor())
 			print()
 			if notified_socket == node.get_sockets()[0]:
 				# the returned value is a pair (conn, address) where conn is a new socket object usable to send and
@@ -142,7 +141,6 @@ def main_loop():
 			else:
 				[[peer_id, count, code], info] = receive(notified_socket)
 				# check for new successor
-				# print([[peer_id, count, code], info])
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
 					node.update_dht(succ[0], succ[1], succ[2], code)
@@ -181,8 +179,6 @@ def main_loop():
 			print()
 			value = sys.stdin.readline().rstrip()
 			if str(value) == "depart":
-				print(node.get_successor())
-				print(node.get_predecessor())
 				node.depart()
 				return
 			elif str(value).lower().startswith("insert"):

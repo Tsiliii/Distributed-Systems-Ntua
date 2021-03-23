@@ -24,11 +24,7 @@ def create_server_socket():
 
 	server_socket.bind((ip, port))
 	# enable the server to accept connections
-	print(server_socket)
-	print("listening")
 	server_socket.listen(2048)
-	print("listened")
-	print(server_socket)
 
 	# list of sockets for select.select()
 	node.add_socket(server_socket)
@@ -118,11 +114,8 @@ def main_loop():
 
 		# iterate over notified ones
 		for notified_socket in read_sockets:
-			print(node.get_successor())
-			print(node.get_predecessor())
 			print()
 			if notified_socket == node.get_sockets()[0]:
-				print(notified_socket)
 				# the returned value is a pair (conn, address) where conn is a new socket object usable to send and
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				peer_socket, peer_address = node.get_sockets()[0].accept()
@@ -134,7 +127,6 @@ def main_loop():
 			else:
 				[[peer_id, count, code], info] = receive(notified_socket)
 				# check for new successor
-				# print([[peer_id, count, code], info])
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
 					node.update_dht(succ[0], succ[1], succ[2], code)
@@ -170,8 +162,6 @@ def main_loop():
 			print()
 			value = sys.stdin.readline().rstrip()
 			if str(value) == "depart":
-				print(node.get_successor())
-				print(node.get_predecessor())
 				node.depart()
 				return
 			elif str(value).lower().startswith("insert"):
