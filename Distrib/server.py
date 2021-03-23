@@ -104,7 +104,7 @@ def receive(socket):
 			continue
 
 		except Exception as e:
-			print('Reading error: '.format(str(e)))
+			print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
 			sys.exit()
 
 def main_loop():
@@ -156,7 +156,7 @@ def main_loop():
 					[data_to_be_recieved, counters_to_be_recieved, departing_node_id] = info
 					node.update_data_on_delete(data_to_be_recieved, counters_to_be_recieved, departing_node_id)
 				print()
-				
+
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]
 		if input:

@@ -104,7 +104,7 @@ def receive(socket):
 			continue
 
 		except Exception as e:
-			print('Reading error: '.format(str(e)))
+			print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
 			sys.exit()
 
 def main_loop():

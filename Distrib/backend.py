@@ -14,7 +14,6 @@ class Node():
 		self.successor = None	  # in the form [id, address, socket]
 		self.predecessor = None		# in the form [id, address, socket]
 		self.socket_list = []
-		self.sockets_to_be_closed = []
 		self.counter = 0
 		self.k = 1
 		self.consistency = 'lazy' #or 'linearizability'
@@ -146,6 +145,8 @@ class Node():
 				print("Key => Value pairs for node: ",self.get_id())
 				for x in tuples.keys():
 					print(x +" => " + tuples[x])
+			else:
+				print("Found request for query *, this node has no data")
 			succ = self.get_successor()
 			[ID, address, socket] = succ
 			# if ID == starting_node_ID
@@ -276,14 +277,6 @@ class Node():
 
 	def remove_socket(self, socket):
 		self.socket_list.remove(socket)
-		self.sockets_to_be_closed.append(socket)
-
-	def close_sockets(self):
-		for socket in sockets_to_be_closed:
-			socket.close()
-
-	def for_future_closing(self, socket):
-		sockets_to_be_closed.append(socket)
 
 	def get_sockets(self):
 		return self.socket_list
@@ -326,7 +319,7 @@ class Node():
 			msg = [[self.get_id(), self.get_counter(), 0], [[self.ip_address, self.port, self.get_id()], [self.ip_address, self.port, self.get_id()], [self.get_k(), self.get_consistency()]]]
 			msg = pickle.dumps(msg, -1)
 			peer_socket.send(msg)
-			
+
 		# if we have just been informed about a new predecessor
 		elif (self.in_between_pred(peer_id) and code == 1) or code == 3:
 			former_predecessor = self.get_predecessor()
@@ -348,6 +341,9 @@ class Node():
 				self.remove_socket(former_successor[2])
 			if code == 2 and self.is_bootstrap and self.get_id() == peer_id: # bootstrap is alone
 				print("I am all alone in this world yet again")
+				for i,sock in enumerate(self.get_sockets()):
+					if i != 0:
+						self.remove_socket(self.get_sockets()[i])
 				self.set_predecessor(None)
 				self.set_successor(None)
 				return
@@ -412,7 +408,7 @@ class Node():
 			msg.pickle.dumps(msg,-1)
 			self.get_successor()[2].send(msg)
 
-
+		# case
 		if self.get_successor()[0] == self.get_predecessor()[0]:
 			self.get_predecessor()[2].send(msg)
 			print("Only node remaining is Bootstrap")
@@ -421,14 +417,19 @@ class Node():
 			return
 
 		self.get_predecessor()[2].send(msg)
+		self.get_predecessor()[2].shutdown(socket.SHUT_RDWR)
+		self.get_predecessor()[2].close()
+		sleep(.1)
+		self.get_successor()[2].shutdown(socket.SHUT_RDWR)
+		self.get_successor()[2].close()
 
-		for some_socket in self.get_sockets():
-			self.remove_socket(some_socket)
+		for i,sock in enumerate(self.get_sockets()):
+			if i != 0:
+				self.remove_socket(self.get_sockets()[i])
 		print(f"sending message to {self.get_predecessor()[2]}")
 
 	def update_data_on_insert():
 		pass
-
 
 	def update_data_on_delete(self, data_of_departing_node, counters_of_departing_node, departing_node_id):
 		data_to_be_passed_on = {}
@@ -443,13 +444,13 @@ class Node():
 				self.replica_counter[key] += 1
 				# pass on the data that need to be passed on?
 				data_to_be_passed_on[key] = data_of_departing_node[key]
-				counters_to_be_passed_on[key] = counters_of_departing_node[key] - 1 
+				counters_to_be_passed_on[key] = counters_of_departing_node[key] - 1
 		# make sure that there is something to pass on, and that we haven't made a full circle
-		if data_to_be_passed_on, and self.get_successor()[0] != departing_node_id:
+		if data_to_be_passed_on and self.get_successor()[0] != departing_node_id:
 			msg = [[self.get_id(), self.get_counter(), 9], [data_to_be_passed_on, counters_to_be_passed_on, departing_node_id]]
 			msg.pickle.dumps(msg,-1)
 			self.get_successor()[2].send(msg)
-		return 
+		return
 
 	def create_socket(self, ip_address, port):
 		print(f"creating socket for address {ip_address} and port {port}")

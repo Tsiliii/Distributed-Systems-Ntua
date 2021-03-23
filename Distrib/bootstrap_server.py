@@ -47,12 +47,8 @@ def receive(socket):
 			# we just did not receive anything
 			continue
 		except Exception as e:
-			if str(e) == "Ran out of input":
-				if node.get_predecessor() != None and node.get_successor()!= None and socket != node.get_predecessor()[2] and socket != node.get_successor()[2]:
-					pass
-			else:
-				print('Reading error: '.format(str(e)))
-				sys.exit()
+			print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
+			sys.exit()
 
 def main_loop(node):
 	while True:
@@ -137,6 +133,9 @@ def main_loop(node):
 					starting_node_ID = node.get_id()
 					key = temporary[1].strip()
 					node.query(key, starting_node_ID)
+			elif str(value).lower().startswith("debug"):
+				for sock in node.get_sockets():
+					print(sock.fileno())
 			else:
 				print(f"You entered: {value}, did you make a mistake?")
 			print()
