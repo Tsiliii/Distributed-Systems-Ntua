@@ -110,7 +110,11 @@ def main_loop(node):
 				elif code == 9:
 					[sent_data, send_key, departing_node_id] = info
 					node.update_data_on_depart(sent_data, send_key, departing_node_id)
+				elif code == 10:
+					[new_node_ID, data_to_be_updated, counters_to_be_updated] = info
+					node.update_data_on_join(new_node_ID, data_to_be_updated, counters_to_be_updated)
 				print()
+
 
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]

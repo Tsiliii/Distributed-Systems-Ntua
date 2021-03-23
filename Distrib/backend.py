@@ -158,6 +158,8 @@ class Node():
 			# if ID == starting_node_ID
 			if int(str(ID)[:4]) == starting_node_ID:
 				return
+			if self.get_predecessor() == None:
+				return
 			msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, False]]
 			msg = pickle.dumps(msg, -1)
 			succ[2].send(msg)
@@ -177,6 +179,8 @@ class Node():
 						else:
 							made_a_round_trip = True
 					print("The key wasn't found on this node, passing the query forward")
+					if self.get_predecessor() == None:
+						return
 					msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, made_a_round_trip]]
 					msg = pickle.dumps(msg, -1)
 					succ[2].send(msg)
@@ -191,6 +195,8 @@ class Node():
 						else:
 							made_a_round_trip = True
 					print("The key wasn't found on this node, passing the query forward")
+					if self.get_predecessor() == None:
+						return
 					msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, made_a_round_trip]]
 					msg = pickle.dumps(msg, -1)
 					succ[2].send(msg)
@@ -199,6 +205,8 @@ class Node():
 					if self.get_data_replica_counter(key) != 1:
 						succ = self.get_successor()
 						print("The key was found on this node, but it's not the latest node, passing the query forward")
+						if self.get_predecessor() == None:
+							return
 						msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID]]
 						msg = pickle.dumps(msg, -1)
 						succ[2].send(msg)
@@ -456,8 +464,17 @@ class Node():
 			self.remove_socket(self.get_sockets()[0])
 		return
 
-	def update_data_on_join():
-		pass
+	def update_data_on_join(self, data_to_be_updated, counters_to_be_updated):
+		# if data and counters sets are empty, that means the message was sent from the node that just joined:
+		if (not data_to_be_updated) and (not counters_to_be_updated):
+			node_data = self.get_data("*")
+			node_counters = self.replica_counter
+			# for each key, there are 3 possibilities:
+			# 1) the node that just joined must be the owner of the data
+			# 2) the node that just joined must have a replica of the data
+			# 3) the node that just joined must not be the owner of the data.
+			for key, value in node_data.items():
+				if node_counters[key] != self.k
 
 	def update_data_on_depart(self, sent_data, sent_key, departing_node_id):
 		if self.get_k() != 1:

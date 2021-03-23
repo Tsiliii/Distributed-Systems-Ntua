@@ -108,6 +108,17 @@ def receive(socket):
 			print(str(e))
 			sys.exit()
 
+"""
+	This function runs after the node is connected to the DHT, and needs to be updated on the 
+	data it must have. It needs to connect to the successor and (possibly) shift the data 
+	left-wise.
+"""
+def get_data():
+	msg = [[node.get_id(), node.get_counter(), 10], [node.get_id(), {}, {}]]
+	msg = pickle.dumps(msg, -1)
+	client_socket.send(msg)
+
+
 def main_loop():
 	while True:
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
@@ -158,6 +169,9 @@ def main_loop():
 				elif code == 9:
 					[sent_data, send_key, departing_node_id] = info
 					node.update_data_on_depart(sent_data, send_key, departing_node_id)
+				elif code == 10:
+					[new_node_ID, data_to_be_updated, counters_to_be_updated] = info
+					node.update_data_on_join(new_node_ID, data_to_be_updated, counters_to_be_updated)
 				print()
 
 		# check for input, set time interval to 0 for non-blocking
@@ -199,4 +213,5 @@ if __name__ == '__main__':
 	# 	print(f"Argument {i:>6}: {arg}")
 	create_server_socket()
 	connect_to_dht()
+	get_data()
 	main_loop()
