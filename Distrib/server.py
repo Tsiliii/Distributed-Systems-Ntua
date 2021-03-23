@@ -166,7 +166,7 @@ def main_loop():
 				print(node.get_successor())
 				print(node.get_predecessor())
 				node.depart()
-				# return
+				return
 			elif str(value).lower().startswith("insert"):
 				temporary = str(value).split(',')
 				if (len(temporary) > 2):

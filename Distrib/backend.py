@@ -439,12 +439,12 @@ class Node():
 			self.get_successor()[2].close()
 			return
 
-		# self.get_predecessor()[2].send(msg)
-		# self.get_predecessor()[2].shutdown(socket.SHUT_RDWR)
-		# self.get_predecessor()[2].close()
-		# sleep(.1)
-		# self.get_successor()[2].shutdown(socket.SHUT_RDWR)
-		# self.get_successor()[2].close()
+		self.get_predecessor()[2].send(msg)
+		self.get_predecessor()[2].shutdown(socket.SHUT_RDWR)
+		self.get_predecessor()[2].close()
+		sleep(.1)
+		self.get_successor()[2].shutdown(socket.SHUT_RDWR)
+		self.get_successor()[2].close()
 
 		for i,sock in enumerate(self.get_sockets()):
 			if i != 0:
