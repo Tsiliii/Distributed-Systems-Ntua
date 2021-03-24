@@ -483,18 +483,165 @@ class Node():
 			self.remove_socket(self.get_sockets()[0])
 		return
 
-	def update_data_on_join(self, data_to_be_updated, counters_to_be_updated):
+	def update_data_on_join(self, new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID):
+		# if the node's ID is the same as the new node's ID, means data must be written.
+		if self.get_id() == new_node_ID:
+			# if the successor of the new node is sending the message, that means that the 
+			# message contains the data that the new node must contain, taken from the 
+			# node after this one.
+			if message_sender_ID == self.successor[0] and message_sender_ID != self.predecessor[0]:
+				for key, value in data_to_be_updated.items():
+					if counters_to_be_updated[key] == 0:
+						continue
+					self.data[key] 			  = value
+					self.replica_counter[key] = counters_to_be_updated[key]
+					print("Inserted:  (", key,",",value,",",counters_to_be_updated[key],")")
+				 
+			# if the message is being sent from the predecessor, that means that the message 
+			# contains data that should be replicated more (i.e. the DHT does not have enough
+			# nodes to cover the k parameter thus far)
+			elif message_sender_ID == self.predecessor[0]and message_sender_ID != self.successor[0]:
+				for key, value in data_to_be_updated.items():
+					if counters_to_be_updated[key] == 0:
+						continue
+					self.data[key] 			  = value
+					self.replica_counter[key] = counters_to_be_updated[key]
+					print("Inserted:  (", key,",",value,",",counters_to_be_updated[key],")")
+
+			# this is the case that the successor is equal to the predecessor, meaning that the 
+			# new node that just entered the DHT is only the second node entering. 
+			else:
+				pass
+			print("I have just joined the DHT, and have inserted the data I was supposed to!")
+			print()
+			return
+
 		# if data and counters sets are empty, that means the message was sent from the node that just joined:
-		if (not data_to_be_updated) and (not counters_to_be_updated):
-			node_data = self.get_data("*")
-			node_counters = self.replica_counter
+		if (not data_to_be_updated) and (not counters_to_be_updated) and self.get_predecessor()[0]==new_node_ID:
+			node_after_new_node_data 	 = self.get_data("*")
+			node_after_new_node_counters = self.replica_counter
+			data_to_be_shifted_left = {}
+			counters_to_be_shifted_left = {}
 			# for each key, there are 3 possibilities:
 			# 1) the node that just joined must be the owner of the data
 			# 2) the node that just joined must have a replica of the data
-			# 3) the node that just joined must not be the owner of the data.
-			for key, value in node_data.items():
-				if node_counters[key] != self.get_k():
-					return
+			# 3) the node that just joined must not be the owner of the data and not have a replica of the data.
+			for key, value in node_after_new_node_data.items():
+				print("(",key,",", value,",",self.replica_counter[key],")")
+				# Case (2)
+				if node_after_new_node_counters[key] != self.get_k():
+					data_to_be_updated[key] 	= node_after_new_node_data[key]
+					counters_to_be_updated[key] = node_after_new_node_counters[key]
+					# now that the new node takes a replica of the data, this action must be passed on, so that
+					# the nodes after "shift" left-wise the data
+					data_to_be_shifted_left[key] = value
+					# reduce the replica counter of the data for this node (same must be done for next nodes)
+					self.replica_counter[key] -= 1
+
+					print("I am giving a replica of (", key,",",value,"), to the new node")				
+
+				# Case (1) if the new node according to the hashing function must own the data,
+				# or Case (3) if according to the hashing function the data belong to the node
+				# after the node that just joined. 
+				else:
+					hashkey = self.hash(key)
+					node_after_new_node_ID = self.get_id()
+					# if it belongs to thhe node after the new node, then do nothing. (Case 3)
+					if ( (node_after_new_node_ID >= hashkey and new_node_ID < hashkey) or \
+						 (node_after_new_node_ID < new_node_ID and \
+						 	(( node_after_new_node_ID <= hashkey and new_node_ID < hashkey ) or \
+						 	(hashkey <= node_after_new_node_ID and hashkey < new_node_ID)))):
+						print("I am keeping ownership of (", key,",",value,")")						
+						continue
+					# if it belongs to the new node, pass it back. (Case 1)
+					else:
+						data_to_be_updated[key] 	= node_after_new_node_data[key]
+						counters_to_be_updated[key] = node_after_new_node_counters[key]
+						# reduce the replica counter of the data for this node (same must be done for next nodes)
+						self.replica_counter[key] -= 1
+						print("I am giving ownership of (", key,",",value,",",counters_to_be_updated[key],"), to the new node")
+
+						# now that the new node takes a replica of the data, this action must be passed on, so that
+						# the nodes after "shift" left-wise the data (even if its replica_counter == 0, must be on)
+						counters_to_be_shifted_left[key] = self.replica_counter[key] - 1 
+						data_to_be_shifted_left[key] 	 = value
+			
+
+			# if the replica counter of a specific datum reaches 0, means the key should be deleted:
+			# should be outside the for loop, because it deletes items from the dict, python does NOT like that.
+			keys_to_be_deleted = []
+			for key, value in node_after_new_node_data.items():
+				if self.replica_counter[key]  == 0:
+					keys_to_be_deleted.append(key)
+			for key in keys_to_be_deleted:		
+				del self.data[key]
+				del self.replica_counter[key]
+				del data_to_be_shifted_left[key]
+				del counters_to_be_shifted_left[key]
+				continue
+
+			# Now, the node after the node that just joined must send messages. First to the node that just joined, 
+			# sending all the data that the new node should have, and then to its successor, so that the action of
+			# the shifting must be passed on, meaning that a new node has just joined, and the replicas are being 
+			# shifted left.			
+			msg = [[self.get_id(), self.get_counter(), 10], [new_node_ID, data_to_be_updated, counters_to_be_updated, self.get_id()]]
+			msg = pickle.dumps(msg,-1)
+			self.get_predecessor()[2].send(msg)
+
+			# send message now to successors:
+			msg = [[self.get_id(), self.get_counter(), 10], [new_node_ID, data_to_be_shifted_left, counters_to_be_shifted_left, self.get_id()]]
+			msg = pickle.dumps(msg,-1)
+			self.get_successor()[2].send(msg)
+			print()
+
+			return
+
+		# Finally, if the node is a distant successor of the node that just joined:
+		if self.get_id() != new_node_ID and self.get_predecessor()[0]!=new_node_ID:
+			# shift left anything that has to be shifted left:
+			for key, value in data_to_be_updated.items():
+				self.data[key]			  	 = value # Update the data as well??????????
+				self.replica_counter[key] 	 = counters_to_be_updated[key]
+				counters_to_be_updated[key] -= 1
+				print("Passing on (", key,",",value,",",counters_to_be_updated[key],")")
+		
+			# if the replica counter of a specific datum reaches 0, means the key should be deleted:
+			# should be outside the for loop, because it deletes items from the dict, python does NOT like that.
+			keys_to_be_deleted = []
+			for key, value in self.data.items():
+				if self.replica_counter[key]  == 0:
+					keys_to_be_deleted.append(key)
+			for key in keys_to_be_deleted:		
+				del self.data[key]
+				del self.replica_counter[key]
+				del data_to_be_shifted_left[key]
+				del counters_to_be_shifted_left[key]
+				continue
+
+			# If the successor node is the new node, that means that we have had a full circle. 
+			# That means that we also have to check if the full circle is less than the k 
+			# parameter, and possibly have to pass on replicas that wouldn't be passed on 
+			# otherwise.
+			if self.get_successor()[0] == new_node_ID:
+				for key, value in self.data.items():
+					if key not in data_to_be_updated and self.replica_counter[key]>1:
+						data_to_be_updated[key] = self.data[key]
+						counters_to_be_updated[key] = self.replica_counter[key] - 1
+						print("Passing on (", key,",",value,",",counters_to_be_updated[key],") as well")
+
+			# send message now to successors:
+			msg = [[self.get_id(), self.get_counter(), 10], [new_node_ID, data_to_be_updated, counters_to_be_updated, self.get_id()]]
+			msg = pickle.dumps(msg,-1)
+			self.get_successor()[2].send(msg)
+			print()
+
+			return 
+
+		# Special case: The node that just entered is only the 2nd node to be entered in the DHT:
+		if self.get_successor()[0] == new_node_ID and self.get_predecessor()[0] == new_node_ID:
+			pass
+
+
 
 	def update_data_on_depart(self, sent_data, sent_key, departing_node_id):
 		if self.get_k() != 1:

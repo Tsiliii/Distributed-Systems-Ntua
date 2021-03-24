@@ -109,8 +109,9 @@ def main_loop(node):
 					[sent_data, send_key, departing_node_id] = info
 					node.update_data_on_depart(sent_data, send_key, departing_node_id)
 				elif code == 10:
-					[new_node_ID, data_to_be_updated, counters_to_be_updated] = info
-					node.update_data_on_join(new_node_ID, data_to_be_updated, counters_to_be_updated)
+					[new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID] = info
+					print(info)
+					node.update_data_on_join(new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID)
 				print()
 
 

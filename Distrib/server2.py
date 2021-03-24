@@ -3,7 +3,9 @@ import select
 import sys
 import pickle
 import errno
+from time import sleep
 from backend import Node
+
 
 #ip = "192.168.0.2"
 ip = "127.0.0.2"
@@ -109,16 +111,18 @@ def receive(socket):
 			print(str(e))
 			sys.exit()
 
+
 """
 	This function runs after the node is connected to the DHT, and needs to be updated on the
 	data it must have. It needs to connect to the successor and (possibly) shift the data
 	left-wise.
 """
 def get_data():
-	return
-	msg = [[node.get_id(), node.get_counter(), 10], [node.get_id(), {}, {}]]
+	succ = node.get_successor()
+	msg = [[node.get_id(), node.get_counter(), 10], [node.get_id(), {}, {}, node.get_id()]]
 	msg = pickle.dumps(msg, -1)
-	client_socket.send(msg)
+	succ[2].send(msg)
+	return
 
 
 def main_loop():
@@ -169,8 +173,9 @@ def main_loop():
 					[sent_data, send_key, departing_node_id] = info
 					node.update_data_on_depart(sent_data, send_key, departing_node_id)
 				elif code == 10:
-					[new_node_ID, data_to_be_updated, counters_to_be_updated] = info
-					node.update_data_on_join(new_node_ID, data_to_be_updated, counters_to_be_updated)
+					[new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID] = info
+					print(info)
+					node.update_data_on_join(new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID)
 				print()
 
 		# check for input, set time interval to 0 for non-blocking
@@ -210,5 +215,9 @@ if __name__ == '__main__':
 	# 	print(f"Argument {i:>6}: {arg}")
 	create_server_socket()
 	connect_to_dht()
+	sleep(1)
+	print()
+	print("Hello there (General Kenobi)! I have just joined! Gib data pls?")
+	print()
 	get_data()
 	main_loop()
