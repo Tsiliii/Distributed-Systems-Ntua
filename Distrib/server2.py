@@ -73,8 +73,8 @@ def connect_to_dht():
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				predecessor_socket, _ = node.get_sockets()[0].accept()
 				# wait until info about predecessor and successor arrives
-				# [_, [pred, succ, [answer_k, answer_consistency]]] = receive(predecessor_socket)
-				[_, [pred, succ]] = receive(predecessor_socket)
+				[_, [pred, succ, [answer_k, answer_consistency]]] = receive(predecessor_socket)
+				# [_, [pred, succ]] = receive(predecessor_socket)
 				# set consistency and k
 				node.set_consistency(answer_consistency)
 				node.set_k(answer_k)

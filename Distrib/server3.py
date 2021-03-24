@@ -3,7 +3,9 @@ import select
 import sys
 import pickle
 import errno
+from time import sleep
 from backend import Node
+
 
 #ip = "192.168.0.2"
 ip = "127.0.0.2"
@@ -24,7 +26,7 @@ def create_server_socket():
 
 	server_socket.bind((ip, port))
 	# enable the server to accept connections
-	server_socket.listen(2048)
+	server_socket.listen()
 
 	# list of sockets for select.select()
 	node.add_socket(server_socket)
@@ -72,6 +74,7 @@ def connect_to_dht():
 				predecessor_socket, _ = node.get_sockets()[0].accept()
 				# wait until info about predecessor and successor arrives
 				[_, [pred, succ, [answer_k, answer_consistency]]] = receive(predecessor_socket)
+				# [_, [pred, succ]] = receive(predecessor_socket)
 				# set consistency and k
 				node.set_consistency(answer_consistency)
 				node.set_k(answer_k)
@@ -101,11 +104,26 @@ def receive(socket):
 				sys.exit()
 			# we just did not receive anything
 			continue
-		# except Exception as e:
-		# 	print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
-		# 	print(socket.fileno())
-		# 	print(str(e))
-		# 	sys.exit()
+
+		except Exception as e:
+			print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
+			print(socket.fileno())
+			print(str(e))
+			sys.exit()
+
+
+"""
+	This function runs after the node is connected to the DHT, and needs to be updated on the
+	data it must have. It needs to connect to the successor and (possibly) shift the data
+	left-wise.
+"""
+def get_data():
+	succ = node.get_successor()
+	msg = [[node.get_id(), node.get_counter(), 10], [node.get_id(), {}, {}, node.get_id()]]
+	msg = pickle.dumps(msg, -1)
+	succ[2].send(msg)
+	return
+
 
 def main_loop():
 	while True:
@@ -154,6 +172,10 @@ def main_loop():
 				elif code == 9:
 					[sent_data, send_key, departing_node_id] = info
 					node.update_data_on_depart(sent_data, send_key, departing_node_id)
+				elif code == 10:
+					[new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID] = info
+					print(info)
+					node.update_data_on_join(new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID)
 				print()
 
 		# check for input, set time interval to 0 for non-blocking
@@ -193,4 +215,9 @@ if __name__ == '__main__':
 	# 	print(f"Argument {i:>6}: {arg}")
 	create_server_socket()
 	connect_to_dht()
+	sleep(1)
+	print()
+	print("Hello there (General Kenobi)! I have just joined! Gib data pls?")
+	print()
+	get_data()
 	main_loop()
