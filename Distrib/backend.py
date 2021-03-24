@@ -60,6 +60,9 @@ class Node():
 	def incr_data_replica_counter(self,key):
 		self.replica_counter[key] += 1
 
+	def decr_data_replica_counter(self,key):
+		self.replica_counter[key] -= 1
+
 	def get_data(self, key):
 		if key == "*":
 			return self.data
@@ -491,17 +494,16 @@ class Node():
 			# node after this one.
 			if message_sender_ID == self.get_successor()[0] and message_sender_ID != self.get_predecessor()[0]:
 				for key, value in data_to_be_updated.items():
-					if counters_to_be_updated[key] == 0:
-						continue
-					self.insert_data(key,value,counters_to_be_updated[key])
-					print("Inserted:  (", key,",",value,",",counters_to_be_updated[key],")")
+					if counters_to_be_updated[key] != 0:
+						self.insert_data(key,value,counters_to_be_updated[key])
+						print("Inserted:  (", key,",",value,",",counters_to_be_updated[key],")")
 
 			# if the message is being sent from the predecessor, that means that the message
 			# contains data that should be replicated more (i.e. the DHT does not have enough
 			# nodes to cover the k parameter thus far)
 			elif message_sender_ID == self.get_predecessor()[0] and message_sender_ID != self.get_successor()[0]:
 				for key, value in data_to_be_updated.items():
-					if counters_to_be_updated[key] == 0 or (self.check_if_in_data(key) and self.get_data_replica_counter(key) == self.get_k()):
+					if counters_to_be_updated[key] == 0 or (self.check_if_in_data(key)):
 						continue
 					self.insert_data(key,value,counters_to_be_updated[key])
 					print("Inserted:  (", key,",",value,",",counters_to_be_updated[key],")")
@@ -511,7 +513,7 @@ class Node():
 			else:
 				pass
 			print("I have just joined the DHT, and have inserted the data I was supposed to!")
-			print()
+			# print()
 			return
 
 		# if data and counters sets are empty, that means the message was sent from the node that just joined:
@@ -534,8 +536,8 @@ class Node():
 					# the nodes after "shift" left-wise the data
 					data_to_be_shifted_left[key] = value
 					# reduce the replica counter of the data for this node (same must be done for next nodes)
-					counters_to_be_shifted_left[key] = self.replica_counter[key]
 					self.replica_counter[key] -= 1
+					counters_to_be_shifted_left[key] = self.replica_counter[key]
 
 					print("I am giving a replica of (", key,",",value,"), to the new node")
 
@@ -557,16 +559,15 @@ class Node():
 						data_to_be_updated[key] 	= node_after_new_node_data[key]
 						counters_to_be_updated[key] = node_after_new_node_counters[key]
 						# reduce the replica counter of the data for this node (same must be done for next nodes)
-						self.replica_counter[key] -= 1
 						print("I am giving ownership of (", key,",",value,",",counters_to_be_updated[key],"), to the new node")
 
 						# now that the new node takes a replica of the data, this action must be passed on, so that
 						# the nodes after "shift" left-wise the data (even if its replica_counter == 0, must be on)
-						counters_to_be_shifted_left[key] = self.replica_counter[key] - 1
+						self.replica_counter[key] -= 1
+						counters_to_be_shifted_left[key] = self.replica_counter[key]
 						data_to_be_shifted_left[key] 	 = value
 
 
-			print(data_to_be_shifted_left,counters_to_be_shifted_left)
 			# if the replica counter of a specific datum reaches 0, means the key should be deleted:
 			# should be outside the for loop, because it deletes items from the dict, python does NOT like that.
 			keys_to_be_deleted = []
@@ -574,8 +575,9 @@ class Node():
 				if self.replica_counter[key]  == 0:
 					keys_to_be_deleted.append(key)
 			for key in keys_to_be_deleted:
-				del self.data[key]
-				del self.replica_counter[key]
+				if self.replica_counter[key] == 0:
+					del self.data[key]
+					del self.replica_counter[key]
 				del data_to_be_shifted_left[key]
 				del counters_to_be_shifted_left[key]
 				continue
@@ -592,31 +594,33 @@ class Node():
 			msg = [[self.get_id(), self.get_counter(), 10], [new_node_ID, data_to_be_shifted_left, counters_to_be_shifted_left, self.get_id()]]
 			msg = pickle.dumps(msg,-1)
 			self.get_successor()[2].send(msg)
-			print()
+			# print()
 
 			return
 
 		# Finally, if the node is a distant successor of the node that just joined:
 		if self.get_id() != new_node_ID and self.get_predecessor()[0]!=new_node_ID:
 			# shift left anything that has to be shifted left:
-			print(counters_to_be_updated)
 			for key, value in data_to_be_updated.items():
 					if self.get_data_replica_counter(key) != self.get_k():
-							self.insert_data(key,value,counters_to_be_updated[key])
+							self.decr_data_replica_counter(key)
+							# self.insert_data(key,value,counters_to_be_updated[key])
 							counters_to_be_updated[key] -= 1
 							print("Passing on (", key,",",value,",",counters_to_be_updated[key],")")
 
 			# if the replica counter of a specific datum reaches 0, means the key should be deleted:
 			# should be outside the for loop, because it deletes items from the dict, python does NOT like that.
+
 			keys_to_be_deleted = []
-			for key, value in self.data.items():
-					if self.replica_counter[key]  == 0:
+			for key, value in data_to_be_updated.items():
+					if self.replica_counter[key]  == 0 or self.replica_counter[key] == self.get_k():
 							keys_to_be_deleted.append(key)
 			for key in keys_to_be_deleted:
-					del self.data[key]
-					del self.replica_counter[key]
-					del data_to_be_shifted_left[key]
-					del counters_to_be_shifted_left[key]
+					if self.replica_counter[key] == 0:
+							del self.data[key]
+							del self.replica_counter[key]
+					del data_to_be_updated[key]
+					del counters_to_be_updated[key]
 					continue
 
 			# If the successor node is the new node, that means that we have had a full circle.
@@ -634,7 +638,7 @@ class Node():
 			msg = [[self.get_id(), self.get_counter(), 10], [new_node_ID, data_to_be_updated, counters_to_be_updated, self.get_id()]]
 			msg = pickle.dumps(msg,-1)
 			self.get_successor()[2].send(msg)
-			print()
+			# print()
 
 			return
 
