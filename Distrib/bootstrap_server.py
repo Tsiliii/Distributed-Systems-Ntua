@@ -212,6 +212,62 @@ def main_loop(node):
 					return
 				else:
 					print("Some nodes are still connected, I can't shutdown")
+			elif str(value).lower().startswith("overlay"):
+				succ = node.get_successor()
+				if succ:
+					starting_node_ID = node.get_id()
+					list_of_nodes = [starting_node_ID]
+					node.overlay(list_of_nodes)
+				else:
+					print("The Chord is just me! Add more nodes please!")
+			elif str(value).lower().startswith("help"):
+				print("""
+Welcome to ToyChord's 1.0 help!
+
+The basic functionalities of the ToyChord CLI include the following:
+
+• \033[4minsert, <key> , <value>\033[0m:
+    This function when called, inserts a (key, value) pair, where key is the
+    name of the song, and value a string (that supposedly returns the node
+    that we must connect to, in order to download said song). Example usage:
+
+	insert, Like a Rolling Stone, 1
+
+• \033[4mdelete, <key>\033[0m:
+    This function when called, deletes a the data related to key, where key
+    is the name of the song. Example usage:
+
+	delete, Like a Rolling Stone
+
+• \033[4mquery, <key>\033[0m:
+    This function when called, looks up a key in the DHT, and if it exists,
+    it returns the corresponding value, from the node that is responsible for
+    this key. You can query the special character "*", and have every
+    <key,value> pairs of every node returned. Example usages:
+
+	query, Like a Rolling Stone
+	query, *
+
+• \033[4mdepart\033[0m:
+    This function gracefully removes a node from the DHT, allowing the Chord
+    to tidily shut down its connections with the other nodesand then remove
+    it from the system.
+
+	depart
+
+• \033[4moverlay\033[0m:
+    This function prints out the nodes that exist in the DHT (each node is
+    represented by its ID), in a manner that shows the order by which the nodes
+    are connected. Example usage:
+
+	overlay
+
+• \033[4mhelp\033[0m:
+    This function prints out this message, assisting you with efficiently using
+    this CLI. Example usage:
+
+	help
+""")
 			else:
 				print(f"You entered: {value}, did you make a mistake?")
 			print()
