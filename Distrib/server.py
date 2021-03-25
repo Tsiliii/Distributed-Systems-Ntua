@@ -173,6 +173,11 @@ def main_loop():
 					[new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID] = info
 					print(info)
 					node.update_data_on_join(new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID)
+				# overlay code:
+				elif code == 11:
+					[list_of_nodes] = info
+					# print(list_of_nodes)
+					node.overlay(list_of_nodes)
 				print()
 
 		# check for input, set time interval to 0 for non-blocking
@@ -200,6 +205,14 @@ def main_loop():
 					starting_node_ID = node.get_id()
 					key = temporary[1].strip()
 					node.query(key, starting_node_ID)
+			elif str(value).lower().startswith("overlay"):
+				succ = node.get_successor()
+				if succ:
+					starting_node_ID = node.get_id()
+					list_of_nodes = [starting_node_ID]
+					node.overlay(list_of_nodes)
+				else:
+					print("The Chord is just me! Add more nodes please!")
 			else:
 				print(f"You entered: {value}, did you make a mistake?")
 			print()

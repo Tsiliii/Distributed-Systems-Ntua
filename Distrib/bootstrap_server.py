@@ -112,6 +112,11 @@ def main_loop(node):
 					[new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID] = info
 					print(info)
 					node.update_data_on_join(new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID)
+				# overlay code:
+				elif code == 11:
+					[list_of_nodes] = info
+					# print(list_of_nodes)
+					node.overlay(list_of_nodes)
 				print()
 
 
@@ -143,6 +148,14 @@ def main_loop(node):
 			elif str(value).lower().startswith("debug"):
 				for sock in node.get_sockets():
 					print(sock.fileno())
+			elif str(value).lower().startswith("overlay"):
+				succ = node.get_successor()
+				if succ:
+					starting_node_ID = node.get_id()
+					list_of_nodes = [starting_node_ID]
+					node.overlay(list_of_nodes)
+				else:
+					print("The Chord is just me! Add more nodes please!")
 			elif str(value).lower().startswith("exit"):
 				if (node.get_successor() == None):
 					print('\033[1m' + "Hasta la vista, baby" + '\033[0m')

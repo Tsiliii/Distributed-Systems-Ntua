@@ -697,6 +697,31 @@ class Node():
 				self.insert_data(key,value,1)
 			return
 
+	def overlay(self, list_of_nodes):
+		# made a full circle, that means print out the whole DHT
+		if self.get_id() == list_of_nodes[0] and len(list_of_nodes) > 1:
+			print("The ring of nodes of the Chord is as follows:")
+			print()
+			# starting node has been added twice
+			del list_of_nodes[0]
+			print(list_of_nodes)
+			print()
+			print("\t",list_of_nodes[0], "⬅----⬉")
+			print("\t"," ↓  ", "     |")
+			for i in range(1,len(list_of_nodes) - 1):
+				print("\t",list_of_nodes[i], "     |")
+				print("\t"," ↓  ", "     |")
+
+			print("\t",list_of_nodes[-1], "➡----⬈")
+
+		# add myself to the list
+		else:
+			list_of_nodes.append(self.get_id())
+			msg = [[self.get_id(), self.get_counter(), 11], [list_of_nodes]]
+			msg = pickle.dumps(msg,-1)
+			self.get_successor()[2].send(msg)
+		return 
+
 	def create_socket(self, ip_address, port):
 		print(f"creating socket for address {ip_address} and port {port}")
 		client_socket = server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

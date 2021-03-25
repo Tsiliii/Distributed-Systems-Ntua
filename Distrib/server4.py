@@ -8,8 +8,8 @@ from backend import Node
 
 
 #ip = "192.168.0.2"
-ip = "127.0.0.2"
-port = 9914
+ip = "127.0.0.3"
+port = 9918
 bootstrap_ip = "127.0.0.1"
 #bootstrap_ip = "192.168.0.1"
 bootstrap_port = 9910
