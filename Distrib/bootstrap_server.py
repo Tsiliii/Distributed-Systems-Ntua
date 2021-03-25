@@ -145,7 +145,7 @@ def main_loop(node):
 					print(sock.fileno())
 			elif str(value).lower().startswith("exit"):
 				if (node.get_successor() == None):
-					print("Hasta la vista, baby")
+					print('\033[1m' + "Hasta la vista, baby" + '\033[0m')
 					print("""
 █████████████████████████████████████
 ███████▀█████████████████████████████
