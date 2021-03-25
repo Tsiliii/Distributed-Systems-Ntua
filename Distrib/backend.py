@@ -15,7 +15,7 @@ class Node():
 		self.predecessor = None		# in the form [id, address, socket]
 		self.socket_list = []
 		self.counter = 0
-		self.k = 1
+		self.k = 3
 		self.consistency = 'lazy' #or 'linearizability'
 		self.replica_counter = {}
 
