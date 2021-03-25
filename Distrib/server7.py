@@ -6,8 +6,8 @@ import errno
 from time import sleep
 from backend import Node
 
-ip = "127.0.0.1"
-port = 9912
+ip = "127.0.0.4"
+port = 9924
 bootstrap_ip = "127.0.0.1"
 bootstrap_port = 9910
 recv_length = 1024
@@ -60,7 +60,6 @@ def connect_to_dht():
 				successor_id = node.compute_id(bootstrap_ip, bootstrap_port)
 				# wait until info about predecessor and successor arrives
 				[_, [_, succ, [answer_k, answer_consistency]]] = receive(client_socket)
-				print(succ, [answer_k, answer_consistency])
 				# set consistency and k
 				node.set_consistency(answer_consistency)
 				node.set_k(answer_k)
@@ -72,7 +71,6 @@ def connect_to_dht():
 				predecessor_socket, _ = node.get_sockets()[0].accept()
 				# wait until info about predecessor and successor arrives
 				[_, [pred, succ, [answer_k, answer_consistency]]] = receive(predecessor_socket)
-				print([pred, succ, [answer_k, answer_consistency]])
 				# set consistency and k
 				node.set_consistency(answer_consistency)
 				node.set_k(answer_k)
@@ -135,17 +133,10 @@ def main_loop():
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				peer_socket, peer_address = node.get_sockets()[0].accept()
 				# wait for info on port
-				[[peer_id, _, code], info] = receive(peer_socket)
-				if code == 3:
-					[_, succ] = info
-					node.update_dht(succ[0], succ[1], succ[2], code, peer_socket)
-					pass
-				else:
-					pred = info
-					print(peer_id,code,pred)
-					print("just received a new connection from", peer_id, "with info", pred)
-					node.update_dht(pred[0], pred[1], peer_id, code, peer_socket)
-					print()
+				[[peer_id, _, code], pred] = receive(peer_socket)
+				print("just received a new connection from", peer_id, "with info", pred)
+				node.update_dht(pred[0], pred[1], peer_id, code, peer_socket)
+				print()
 			elif notified_socket not in node.get_sockets():
 				continue
 			else:
@@ -210,8 +201,6 @@ def main_loop():
 					key = temporary[1].strip()
 					node.delete(key)
 			elif str(value).lower().startswith("debug"):
-				print(node.get_predecessor())
-				print(node.get_successor())
 				for sock in node.get_sockets():
 					print(sock)
 			elif str(value).lower().startswith("query"):
@@ -292,5 +281,5 @@ if __name__ == '__main__':
 	print()
 	print("Hello there (General Kenobi)! I have just joined! Gib data pls?")
 	print()
-	get_data()
+	# get_data()
 	main_loop()

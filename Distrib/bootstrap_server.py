@@ -74,10 +74,13 @@ def main_loop(node):
 				# the returned value is a pair (conn, address) where conn is a new socket object usable to send and
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				peer_socket, _ = notified_socket.accept()
+
 				# receive port number
 				[[peer_id, _, code], info] = receive(peer_socket)
+
 				if code == 3:
 					print("INFO",info)
+					print("SOCKS2",node.get_sockets())
 					[_, succ] = info
 					node.update_dht(succ[0], succ[1], succ[2], code, peer_socket)
 				else:
@@ -96,6 +99,7 @@ def main_loop(node):
 			elif notified_socket not in node.get_sockets():
 				continue
 			else:
+				# print(receive(notified_socket))
 				[[peer_id, count, code], info] = receive(notified_socket)
 				print(code, info)
 				# check for new successor
@@ -104,7 +108,7 @@ def main_loop(node):
 					node.update_dht(succ[0], succ[1], succ[2], code)
 				elif code == 1:
 					[pred_ip, pred_port] = info
-					node.update_dht(pred_ip, pred_port, peer_id, code=1, peer_socket=notified_socket)
+					node.update_dht(pred_ip, pred_port, peer_id, code = 1, peer_socket = notified_socket)
 				#insert code
 				elif code == 4:
 					[key,value] = info
@@ -128,9 +132,6 @@ def main_loop(node):
 				#update data on predecessor departing:
 				elif code == 9:
 					[sent_data, send_key, departing_node_id] = info
-					print()
-					if node.get_predecessor()[0] == departing_node_id:
-						node.remove_socket(node.get_successor()[2])
 					node.update_data_on_depart(sent_data, send_key, departing_node_id)
 				elif code == 10:
 					[new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID] = info

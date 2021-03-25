@@ -133,10 +133,17 @@ def main_loop():
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				peer_socket, peer_address = node.get_sockets()[0].accept()
 				# wait for info on port
-				[[peer_id, _, code], pred] = receive(peer_socket)
-				print("just received a new connection from", peer_id, "with info", pred)
-				node.update_dht(pred[0], pred[1], peer_id, code, peer_socket)
-				print()
+				[[peer_id, _, code], info] = receive(peer_socket)
+				if code == 3:
+					[_, succ] = info
+					node.update_dht(succ[0], succ[1], succ[2], code, peer_socket)
+					pass
+				else:
+					pred = info
+					print(peer_id,code,pred)
+					print("just received a new connection from", peer_id, "with info", pred)
+					node.update_dht(pred[0], pred[1], peer_id, code, peer_socket)
+					print()
 			elif notified_socket not in node.get_sockets():
 				continue
 			else:
@@ -201,6 +208,8 @@ def main_loop():
 					key = temporary[1].strip()
 					node.delete(key)
 			elif str(value).lower().startswith("debug"):
+				print(node.get_predecessor())
+				print(node.get_successor())
 				for sock in node.get_sockets():
 					print(sock)
 			elif str(value).lower().startswith("query"):

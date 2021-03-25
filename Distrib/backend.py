@@ -326,6 +326,7 @@ class Node():
 		# code = 2 departed node pred
 		# code = 3 departed node succ (messaged from departed node pred)
 
+		print(peer_ip_address, peer_port, peer_id, code)
 		# second node entered
 		if self.is_bootstrap and self.get_successor() == None:
 			self.set_successor([peer_id, [peer_ip_address, peer_port], peer_socket])
@@ -349,9 +350,9 @@ class Node():
 				to_close.shutdown(socket.SHUT_RDWR)
 				to_close.close()
 			return
-			
+
 		# if we have just been informed about a new predecessor
-		elif (self.in_between_pred(peer_id) and code == 1) or code == 3:
+		elif (self.in_between_pred(peer_id) and code == 1):
 			former_predecessor = self.get_predecessor()
 
 			# remove socket only node to be added is not the third one
@@ -359,85 +360,95 @@ class Node():
 				self.remove_socket(former_predecessor[2])
 				former_predecessor[2].close()
 				print("1,",self.get_id(), "closed", former_predecessor)
-				print(self.get_sockets())
-			if peer_id != self.get_successor()[0]:
-				self.add_socket(peer_socket)
-				print("2")
-				print()
-				print()
-				print()
-				print()
-				print()
-				print()
-				print()
-				print(peer_id, peer_ip_address, peer_port, peer_socket)
-				print()
-				print()
-				print()
-				print()
-				print()
-				print()
-				print()
-				print()
-				self.set_predecessor([peer_id, [peer_ip_address, peer_port], peer_socket])
-			else:
-				self.set_predecessor([peer_id, [peer_ip_address, peer_port], self.get_successor()[2]])
+			self.add_socket(peer_socket)
+			self.set_predecessor([peer_id, [peer_ip_address, peer_port], peer_socket])
 			print("informed of a predecessor: ", peer_id)
+			return
+
+		elif code == 3:
+			former_predecessor = self.get_predecessor()
+			self.remove_socket(former_predecessor[2])
+			former_predecessor[2].close()
+			print("2,",self.get_id(), "closed", former_predecessor)
+			print(peer_id,peer_socket)
+			if self.get_successor()[0] != peer_id:
+				self.add_socket(peer_socket)
+			self.set_predecessor([peer_id, [peer_ip_address, peer_port], peer_socket])
+			print("informed of a predecessor: ", peer_id)
+			return
 
 		# if it is the successor of the current node
-		elif self.in_between_succ(peer_id) or code == 2:
-			print("3")
+		elif self.in_between_succ(peer_id) and code == 0:
+			# create the new socket
+			peer_socket = self.create_socket(peer_ip_address, peer_port)
+
+			# close connection to successor and remove successor info if he is not predecessor aswell
 			former_successor = self.get_successor()
-			if code == 2 and self.is_bootstrap and self.get_id() == peer_id: # bootstrap is alone
-				print("I am all alone in this world yet again")
-				while (len(self.get_sockets()) > 1):
-					to_be_killed = self.get_sockets()[1]
-					print(to_be_killed)
-					print("2,",self.get_id(), "closed", to_be_killed)
-					self.remove_socket(self.get_sockets()[1])
-					to_be_killed.shutdown(socket.SHUT_RDWR)
-					to_be_killed.close()
-				print("4")
-				self.set_predecessor(None)
-				self.set_successor(None)
-				return
+			if self.get_successor()[0] != self.get_predecessor()[0]:   # checking if pred and succ is the same node
+				self.remove_socket(former_successor[2])
+				former_successor[2].shutdown(socket.SHUT_RDWR)
+				former_successor[2].close()
+				print("3,",self.get_id(), "closed", former_successor)
 
-			if peer_id != self.get_predecessor()[0]:   # checking if pred and succ is the same node
-				if peer_socket == None:
-					peer_socket = self.create_socket(peer_ip_address, peer_port)
+			# set the new successor
+			self.add_socket(peer_socket)
+			self.set_successor([peer_id, [peer_ip_address, peer_port], peer_socket])
 
-				if self.get_predecessor()[0] != self.get_successor()[0]:
-					# close connection to successor
-					former_successor = self.get_successor()
-					self.remove_socket(former_successor[2])
-					former_successor[2].shutdown(socket.SHUT_RDWR)
-					former_successor[2].close()
-					print("3,",self.get_id(), "closed", former_successor)
-
-				self.add_socket(peer_socket)
-				self.set_successor([peer_id, [peer_ip_address, peer_port], peer_socket])
-			else:
-				self.set_successor([peer_id, [peer_ip_address, peer_port], self.get_predecessor()[2]])
-			if code == 0:
-				msg = [[self.get_id(), self.get_counter(), 0], [[self.get_ip_address(), self.get_port(), self.get_id()], [former_successor[1][0], former_successor[1][1], former_successor[0]] , [self.get_k(), self.get_consistency()]]]
-			elif code == 1:
-				msg = [[self.get_id(), self.get_counter(), 1], [self.get_ip_address(), self.get_port()]]
-			elif code == 2:
-				print("Sending to my successor",self.get_successor())
-				msg = [[self.get_id(), self.get_counter(), 3], [[self.get_ip_address(), self.get_port(), self.get_id()], [self.get_ip_address(), self.get_port(), self.get_id()]]]
-				print("Code = 2",msg)
+			# print(self.get_successor())
+			# print(self.get_predecessor())
+			# print(self.get_sockets())
+			msg = [[self.get_id(), self.get_counter(), 0], [[self.get_ip_address(), self.get_port(), self.get_id()], [former_successor[1][0], former_successor[1][1], former_successor[0]] , [self.get_k(), self.get_consistency()]]]
+			print("Sending to my succ 0",self.get_successor(),msg)
 			msg = pickle.dumps(msg, -1)
 			self.get_successor()[2].send(msg)
 			print("Sent 2")
+			print("found_successor: ", peer_id)
+
+		elif code == 2:
+
+			# 3 node case (nasty)
+			if peer_id == self.get_predecessor()[0] and self.get_successor()[0] != self.get_predecessor()[0]:
+				former_successor = self.get_successor()
+
+				# remove successor
+				self.remove_socket(former_successor[2])
+				former_successor[2].shutdown(socket.SHUT_RDWR)
+				former_successor[2].close()
+
+				#set new successor
+				self.set_successor([peer_id, [peer_ip_address, peer_port], self.get_predecessor()[2]])
+
+				# message new successor
+				msg = [[self.get_id(), self.get_counter(), 3], [[self.get_ip_address(), self.get_port(), self.get_id()], [self.get_ip_address(), self.get_port(), self.get_id()]]]
+				print("Sending to my successor 3",self.get_successor(),msg)
+				msg = pickle.dumps(msg, -1)
+				self.get_successor()[2].send(msg)
+				print("found_successor: ", peer_id)
+				return
+
+			# close connection to successor and remove successor info if he is not predecessor aswell
+			former_successor = self.get_successor()
+			peer_socket = self.create_socket(peer_ip_address, peer_port)
+			if self.get_successor()[0] != self.get_predecessor()[0]:   # checking if pred and succ is the same node
+				self.remove_socket(former_successor[2])
+				former_successor[2].shutdown(socket.SHUT_RDWR)
+				former_successor[2].close()
+				print("3,",self.get_id(), "closed", former_successor)
+				self.add_socket(peer_socket)
+			self.set_successor([peer_id,[peer_ip_address, peer_port], peer_socket])
+
+			msg = [[self.get_id(), self.get_counter(), 3], [[self.get_ip_address(), self.get_port(), self.get_id()], [self.get_ip_address(), self.get_port(), self.get_id()]]]
+			print("Sending to my successor 3",self.get_successor(),msg)
+			msg = pickle.dumps(msg, -1)
+			self.get_successor()[2].send(msg)
 			print("found_successor: ", peer_id)
 
 		# if it is not the successor of the current node
 		else:
 			msg = [[self.get_id(), self.get_counter(), 0], [[self.get_ip_address(), self.get_port(), self.get_id()], [peer_ip_address, peer_port, peer_id]]]
 			msg = pickle.dumps(msg, -1)
-			print("node:", peer_id)
+			print("Found info about node:", peer_id)
 			self.get_successor()[2].send(msg)
-			print("Sent 3")
 
 	def join(self, pred, succ, bootstrap_socket=None):
 		self.add_socket(pred[2])
