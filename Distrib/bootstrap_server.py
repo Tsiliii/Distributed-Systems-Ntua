@@ -122,7 +122,7 @@ def main_loop(node):
 			value = sys.stdin.readline().rstrip()
 			if str(value) == "depart":
 				# node.depart()
-				print("This is the bootstrap node you probably shouldn't depart!!\nIf you are sure use Ctrl-C")
+				print("This is the bootstrap node you probably shouldn't depart!!\nIf you are sure use exit or even Ctrl-C")
 			elif str(value).lower().startswith("insert"):
 				temporary = str(value).split(',')
 				if (len(temporary) > 2):

@@ -226,21 +226,6 @@ class Node():
 			#one node case
 			if self.get_predecessor() == None:
 				if self.check_if_in_data(key):
-					print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
-					self.update_data(key,value)
-					return
-				else:
-					print("I,",self.get_id(),"just inserted data",key,"with hash id",self.hash(key))
-					self.insert_data(key,value,self.get_k())
-					return
-
-			pred = self.get_predecessor()[0]
-			me = self.get_id()
-			hashkey = self.hash(key)
-
-			#one node case
-			if me == pred:
-				if self.check_if_in_data(key):
 					print("I,",self.get_id(),"just deleted key:",key,"with value:",self.get_data(key))
 					self.delete_data(key)
 					return
@@ -249,6 +234,7 @@ class Node():
 					return
 
 			# print(pred,hashkey,me)
+			me, hashkey, pred = self.get_id(), self.hash(key), self.get_predecessor()[0]
 			if ( (me >= hashkey and pred < hashkey) or (me < pred and (( me <= hashkey and pred < hashkey ) or (hashkey <= me and hashkey < pred)))):
 				if self.check_if_in_data(key):
 					print("I,",self.get_id(),"just deleted key:",key,"with value:",self.get_data(key))
