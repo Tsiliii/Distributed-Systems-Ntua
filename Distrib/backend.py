@@ -339,6 +339,17 @@ class Node():
 			peer_socket.send(msg)
 			print("Sent 1")
 
+		# second node leaves
+		elif self.is_bootstrap and code == 2 and self.get_successor()[0] == self.get_predecessor()[0]:
+			self.set_successor(None)
+			self.set_predecessor(None)
+			if len(self.get_sockets()) > 1:
+				to_close = self.get_sockets()[1]
+				self.remove_socket(to_close)
+				to_close.shutdown(socket.SHUT_RDWR)
+				to_close.close()
+			return
+			
 		# if we have just been informed about a new predecessor
 		elif (self.in_between_pred(peer_id) and code == 1) or code == 3:
 			former_predecessor = self.get_predecessor()
@@ -381,10 +392,10 @@ class Node():
 				print("I am all alone in this world yet again")
 				while (len(self.get_sockets()) > 1):
 					to_be_killed = self.get_sockets()[1]
-					# to_be_killed.shutdown(socket.SHUT_RDWR)
 					print(to_be_killed)
 					print("2,",self.get_id(), "closed", to_be_killed)
 					self.remove_socket(self.get_sockets()[1])
+					to_be_killed.shutdown(socket.SHUT_RDWR)
 					to_be_killed.close()
 				print("4")
 				self.set_predecessor(None)
@@ -398,8 +409,8 @@ class Node():
 				if self.get_predecessor()[0] != self.get_successor()[0]:
 					# close connection to successor
 					former_successor = self.get_successor()
-					# former_successor[2].shutdown(socket.SHUT_RDWR)
 					self.remove_socket(former_successor[2])
+					former_successor[2].shutdown(socket.SHUT_RDWR)
 					former_successor[2].close()
 					print("3,",self.get_id(), "closed", former_successor)
 
@@ -485,34 +496,38 @@ class Node():
 		# network adjustments
 		successor = self.get_successor()
 		msg = [[self.get_id(), self.get_counter(), 2], [[self.get_ip_address(), self.get_port(), self.get_id()], [successor[1][0], successor[1][1], successor[0]]]]
-		print(msg)
+		# print(msg)
 		msg = pickle.dumps(msg, -1)
 
 		sleep(1)
-		# case
+		# 2 nodes case where succ == pred == bootstrap
 		if self.get_successor()[0] == self.get_predecessor()[0]:
 			self.get_predecessor()[2].send(msg)
 			print("Only node remaining is Bootstrap")
-			# sleep(.1)
-			# self.get_successor()[2].shutdown(socket.SHUT_RDWR)
+			sleep(.1)
+			self.get_successor()[2].shutdown(socket.SHUT_RDWR)
 			self.get_successor()[2].close()
 			print("4,",self.get_id(), "closed", self.get_successor())
-
 			return
 
 		self.get_predecessor()[2].send(msg)
 		print(f"sending message to {self.get_predecessor()[2]}")
 		sleep(.1)
-		# self.get_predecessor()[2].shutdown(socket.SHUT_RDWR)
+		self.get_predecessor()[2].shutdown(socket.SHUT_RDWR)
 		self.get_predecessor()[2].close()
 		print("5,",self.get_id(), "closed", self.get_predecessor())
+		self.remove_socket(self.get_predecessor()[2])
 		sleep(.1)
-		# self.get_successor()[2].shutdown(socket.SHUT_RDWR)
+		self.get_successor()[2].shutdown(socket.SHUT_RDWR)
 		self.get_successor()[2].close()
 		print("6,",self.get_id(), "closed", self.get_successor())
+		self.remove_socket(self.get_successor()[2])
 
 		while (self.get_sockets()):
+			self.get_sockets()[0].shutdown(socket.SHUT_RDWR)
+			self.get_sockets()[0].close()
 			self.remove_socket(self.get_sockets()[0])
+			sleep(.1)
 		return
 
 	def update_data_on_join(self, new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID):
@@ -774,7 +789,7 @@ class Node():
 			msg = [[self.get_id(), self.get_counter(), 11], [list_of_nodes]]
 			msg = pickle.dumps(msg,-1)
 			self.get_successor()[2].send(msg)
-		return 
+		return
 
 	def create_socket(self, ip_address, port):
 		print(f"creating socket for address {ip_address} and port {port}")
