@@ -15,7 +15,7 @@ class Node():
 		self.predecessor = None		# in the form [id, address, socket]
 		self.socket_list = []
 		self.counter = 0
-		self.k = 3
+		self.k = 1
 		self.consistency = 'lazy' #or 'linearizability'
 		self.replica_counter = {}
 
@@ -705,14 +705,25 @@ class Node():
 			# starting node has been added twice
 			del list_of_nodes[0]
 			print(list_of_nodes)
-			print()
-			print("\t",list_of_nodes[0], "⬅----⬉")
-			print("\t"," ↓  ", "     |")
+			sorted_list_of_nodes = list_of_nodes.copy()
+			sorted_list_of_nodes.sort()
+			print("\t          \t\t Sorted Chord:")
+			if sorted_list_of_nodes[0] == list_of_nodes[0]:
+				print("\t","\033[4m"+ str(list_of_nodes[0]) + "\033[0m", "⬅----⬉\t\t", "\033[4m"+ str(sorted_list_of_nodes[0]) + "\033[0m", "⬅----⬉")
+			else:
+				print("\t","\033[4m"+ str(list_of_nodes[0]) + "\033[0m", "⬅----⬉\t\t", sorted_list_of_nodes[0], "⬅----⬉")
+			print("\t"," ↓  ", "     |\t\t ↓  ", "      |")
 			for i in range(1,len(list_of_nodes) - 1):
-				print("\t",list_of_nodes[i], "     |")
-				print("\t"," ↓  ", "     |")
+				if sorted_list_of_nodes[i] != list_of_nodes[0]:
+					print("\t",list_of_nodes[i], "     |\t\t", sorted_list_of_nodes[i], "     |")
+				else:
+					print("\t",list_of_nodes[i], "     |\t\t", "\033[4m"+ str(sorted_list_of_nodes[i]) + "\033[0m", "     |")
+				print("\t"," ↓  ", "     |\t\t ↓  ", "      |")
 
-			print("\t",list_of_nodes[-1], "➡----⬈")
+			if sorted_list_of_nodes[-1] != list_of_nodes[0]:
+				print("\t",list_of_nodes[-1], "➡----⬈\t\t", sorted_list_of_nodes[-1], "➡----⬈")
+			else:
+				print("\t",list_of_nodes[-1], "➡----⬈\t\t", "\033[4m"+ str(sorted_list_of_nodes[-1]) + "\033[0m", "➡----⬈")
 
 		# add myself to the list
 		else:
