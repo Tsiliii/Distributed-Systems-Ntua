@@ -6,8 +6,8 @@ import errno
 from time import sleep
 from backend import Node
 
-ip = "127.0.0.1"
-port = 9912
+ip = "127.0.0.3"
+port = 9918
 bootstrap_ip = "127.0.0.1"
 bootstrap_port = 9910
 recv_length = 1024

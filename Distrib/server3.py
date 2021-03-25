@@ -6,12 +6,9 @@ import errno
 from time import sleep
 from backend import Node
 
-
-#ip = "192.168.0.2"
 ip = "127.0.0.2"
 port = 9916
 bootstrap_ip = "127.0.0.1"
-#bootstrap_ip = "192.168.0.1"
 bootstrap_port = 9910
 recv_length = 1024
 
@@ -74,7 +71,6 @@ def connect_to_dht():
 				predecessor_socket, _ = node.get_sockets()[0].accept()
 				# wait until info about predecessor and successor arrives
 				[_, [pred, succ, [answer_k, answer_consistency]]] = receive(predecessor_socket)
-				# [_, [pred, succ]] = receive(predecessor_socket)
 				# set consistency and k
 				node.set_consistency(answer_consistency)
 				node.set_k(answer_k)
@@ -104,13 +100,11 @@ def receive(socket):
 				sys.exit()
 			# we just did not receive anything
 			continue
-
 		except Exception as e:
 			print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
 			print(socket.fileno())
 			print(str(e))
 			sys.exit()
-
 
 """
 	This function runs after the node is connected to the DHT, and needs to be updated on the
@@ -127,6 +121,7 @@ def get_data():
 
 def main_loop():
 	while True:
+		sleep(.1)
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
 
@@ -142,8 +137,11 @@ def main_loop():
 				print("just received a new connection from", peer_id, "with info", pred)
 				node.update_dht(pred[0], pred[1], peer_id, code, peer_socket)
 				print()
+			elif notified_socket not in node.get_sockets():
+				continue
 			else:
 				[[peer_id, count, code], info] = receive(notified_socket)
+				print(code, info)
 				# check for new successor
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
@@ -176,7 +174,7 @@ def main_loop():
 					[new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID] = info
 					print(info)
 					node.update_data_on_join(new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID)
-				print()
+			print()
 
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]
@@ -197,6 +195,9 @@ def main_loop():
 				if (len(temporary) > 1):
 					key = temporary[1].strip()
 					node.delete(key)
+			elif str(value).lower().startswith("debug"):
+				for sock in node.get_sockets():
+					print(sock)
 			elif str(value).lower().startswith("query"):
 				temporary = str(value).split(',')
 				if (len(temporary) > 1):

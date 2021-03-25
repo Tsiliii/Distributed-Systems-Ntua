@@ -46,12 +46,15 @@ def receive(socket):
 				print('Reading error: {}'.format(str(e)))
 				sys.exit()
 			# we just did not receive anything
+			socket.close()
 			continue
-		except Exception as e:
-			print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
-			print(socket.fileno())
-			print(str(e))
-			sys.exit()
+		except EOFError:
+			continue
+		# except Exception as e:
+		# 	print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
+		# 	print(socket.fileno())
+		# 	print(str(e))
+		# 	sys.exit()
 
 def main_loop(node):
 	while True:
@@ -60,23 +63,41 @@ def main_loop(node):
 
 		# iterate over notified sockets
 		for notified_socket in read_sockets:
-			print()
+			print("NOTIFIED",notified_socket)
+			print("PRED",node.get_predecessor())
+			print("SUCC",node.get_successor())
+			print("SOCKS",node.get_sockets())
 			node.set_counter()
 			# if notified socket is a server socket - new connection, accept it
 			if notified_socket == node.get_sockets()[0]:
+				# print("GOT IN",notified_socket, node.get_sockets()[0],node.get_sockets())
 				# the returned value is a pair (conn, address) where conn is a new socket object usable to send and
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				peer_socket, _ = notified_socket.accept()
 				# receive port number
-				[[peer_id, _, code], [peer_ip_address, peer_port]] = receive(peer_socket)
-				print(f"node {peer_id} attempted to connect with {peer_ip_address} and {peer_port}")
-				# if it is the new predecessor then peer_socket must be monitored
-				if node.in_between_pred(peer_id) and code == 0 and node.get_predecessor() != None:
-					node.add_socket(peer_socket)
-				node.update_dht(peer_ip_address, peer_port, peer_id, code, peer_socket)
+				[[peer_id, _, code], info] = receive(peer_socket)
+				if code == 3:
+					print("INFO",info)
+					[_, succ] = info
+					node.update_dht(succ[0], succ[1], succ[2], code, peer_socket)
+				else:
+					[peer_ip_address, peer_port] = info
+					print(f"node {peer_id} attempted to connect with {peer_ip_address} and {peer_port}")
+					# if it is the new predecessor then peer_socket must be monitored
+					if node.in_between_pred(peer_id) and code == 0 and node.get_predecessor() != None:
+						node.add_socket(peer_socket)
+						if node.get_successor() != node.get_predecessor():
+							node.remove_socket(node.get_predecessor()[2])
+						print("new socket, ",peer_socket)
+					# print("COMPARE",peer_socket, node.get_sockets()[0])
+					node.update_dht(peer_ip_address, peer_port, peer_id, code, peer_socket)
+					# print(node.get_sockets())
 				print()
+			elif notified_socket not in node.get_sockets():
+				continue
 			else:
 				[[peer_id, count, code], info] = receive(notified_socket)
+				print(code, info)
 				# check for new successor
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
@@ -107,6 +128,9 @@ def main_loop(node):
 				#update data on predecessor departing:
 				elif code == 9:
 					[sent_data, send_key, departing_node_id] = info
+					print()
+					if node.get_predecessor()[0] == departing_node_id:
+						node.remove_socket(node.get_successor()[2])
 					node.update_data_on_depart(sent_data, send_key, departing_node_id)
 				elif code == 10:
 					[new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID] = info
@@ -141,8 +165,10 @@ def main_loop(node):
 					key = temporary[1].strip()
 					node.query(key, starting_node_ID)
 			elif str(value).lower().startswith("debug"):
+				print(node.get_predecessor())
+				print(node.get_successor())
 				for sock in node.get_sockets():
-					print(sock.fileno())
+					print(sock)
 			elif str(value).lower().startswith("exit"):
 				if (node.get_successor() == None):
 					print('\033[1m' + "Hasta la vista, baby" + '\033[0m')
@@ -179,7 +205,7 @@ def main_loop(node):
 					""")
 					return
 				else:
-					print("Some nodes are still connected, i can't shutdown")
+					print("Some nodes are still connected, I can't shutdown")
 			else:
 				print(f"You entered: {value}, did you make a mistake?")
 			print()
