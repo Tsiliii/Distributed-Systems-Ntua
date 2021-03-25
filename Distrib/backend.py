@@ -740,6 +740,42 @@ class Node():
 				self.insert_data(key,value,1)
 			return
 
+	def overlay(self, list_of_nodes):
+		# made a full circle, that means print out the whole DHT
+		if self.get_id() == list_of_nodes[0] and len(list_of_nodes) > 1:
+			print("The ring of nodes of the Chord is as follows:")
+			print()
+			# starting node has been added twice
+			del list_of_nodes[0]
+			print(list_of_nodes)
+			sorted_list_of_nodes = list_of_nodes.copy()
+			sorted_list_of_nodes.sort()
+			print("\t          \t\t Sorted Chord:")
+			if sorted_list_of_nodes[0] == list_of_nodes[0]:
+				print("\t","\033[4m"+ str(list_of_nodes[0]) + "\033[0m", "⬅----⬉\t\t", "\033[4m"+ str(sorted_list_of_nodes[0]) + "\033[0m", "⬅----⬉")
+			else:
+				print("\t","\033[4m"+ str(list_of_nodes[0]) + "\033[0m", "⬅----⬉\t\t", sorted_list_of_nodes[0], "⬅----⬉")
+			print("\t"," ↓  ", "     |\t\t ↓  ", "      |")
+			for i in range(1,len(list_of_nodes) - 1):
+				if sorted_list_of_nodes[i] != list_of_nodes[0]:
+					print("\t",list_of_nodes[i], "     |\t\t", sorted_list_of_nodes[i], "     |")
+				else:
+					print("\t",list_of_nodes[i], "     |\t\t", "\033[4m"+ str(sorted_list_of_nodes[i]) + "\033[0m", "     |")
+				print("\t"," ↓  ", "     |\t\t ↓  ", "      |")
+
+			if sorted_list_of_nodes[-1] != list_of_nodes[0]:
+				print("\t",list_of_nodes[-1], "➡----⬈\t\t", sorted_list_of_nodes[-1], "➡----⬈")
+			else:
+				print("\t",list_of_nodes[-1], "➡----⬈\t\t", "\033[4m"+ str(sorted_list_of_nodes[-1]) + "\033[0m", "➡----⬈")
+
+		# add myself to the list
+		else:
+			list_of_nodes.append(self.get_id())
+			msg = [[self.get_id(), self.get_counter(), 11], [list_of_nodes]]
+			msg = pickle.dumps(msg,-1)
+			self.get_successor()[2].send(msg)
+		return 
+
 	def create_socket(self, ip_address, port):
 		print(f"creating socket for address {ip_address} and port {port}")
 		client_socket = server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

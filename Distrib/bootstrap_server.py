@@ -136,6 +136,11 @@ def main_loop(node):
 					[new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID] = info
 					print(info)
 					node.update_data_on_join(new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID)
+				# overlay code:
+				elif code == 11:
+					[list_of_nodes] = info
+					# print(list_of_nodes)
+					node.overlay(list_of_nodes)
 				print()
 
 
