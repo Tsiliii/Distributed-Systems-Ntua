@@ -170,7 +170,7 @@ class Node():
 		else:
 			if self.consistency == "lazy":
 				if self.check_if_in_data(key): #That means that the node is in the replication chain
-					print(key + " => " + self.get_data(key), self.get_data_replica_counter(x))
+					print(key + " => " + self.get_data(key), self.get_data_replica_counter(key))
 					return
 				else: #That means the node is outside the replication chain, we must find the first node that has it
 					if self.get_predecessor() == None:
@@ -219,7 +219,7 @@ class Node():
 						succ[2].send(msg)
 						return
 					else:
-						print(key + " => " + self.get_data(key), self.get_data_replica_counter(x))
+						print(key + " => " + self.get_data(key), self.get_data_replica_counter(key))
 						return
 
 	def delete(self, key):
@@ -487,6 +487,47 @@ class Node():
 		return
 
 	def update_data_on_join(self, new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID):
+
+		# Special case: The node that just entered is only the 2nd node to be entered in the DHT:
+		if self.get_successor()[0] == new_node_ID and self.get_predecessor()[0] == new_node_ID:
+			my_data = self.get_data("*")
+			# i am bootstrap and i check whether there is data to pass on
+			if my_data:
+				data_to_be_updated = {}
+				counters_to_be_updated = {}
+				for key, value in my_data.items():
+					# item belongs to new node
+					me, hashkey, pred = self.get_id(), self.hash(key), new_node_ID
+					if (me >= hashkey and pred < hashkey) or (me < pred and (( me <= hashkey and pred < hashkey ) or (hashkey <= me and hashkey < pred))):
+						if self.get_k() != 1:
+							data_to_be_updated[key] = value
+							counters_to_be_updated[key] = self.get_k() - 1
+							print("I am keeping ownership of (", key,",",value,")")
+					# item belongs to bootstrap
+					else:
+						data_to_be_updated[key] = value
+						counters_to_be_updated[key] = self.get_k()
+						print("I am giving ownership of (", key,",",value,",",counters_to_be_updated[key],"), to the new node")
+						if self.get_k() == 1:
+							self.delete_data(key)
+						else:
+							self.decr_data_replica_counter(key)
+				# inform new node of his new data
+				msg = [[self.get_id(), self.get_counter(), 10], [new_node_ID, data_to_be_updated, counters_to_be_updated, self.get_id()]]
+				msg = pickle.dumps(msg,-1)
+				self.get_successor()[2].send(msg)
+				return
+			else:
+				return
+
+		# Special case continue:
+		if self.get_successor()[0] == self.get_predecessor()[0]:
+			# just place everything with the correct replica counter key
+			for key, value in data_to_be_updated.items():
+				print("Inserted:  (", key,",",value,",",counters_to_be_updated[key],")")
+				self.insert_data(key,value,counters_to_be_updated[key])
+			return
+
 		# if the node's ID is the same as the new node's ID, means data must be written (except for the items that belong to the new node).
 		if self.get_id() == new_node_ID:
 			# if the successor of the new node is sending the message, that means that the
@@ -508,16 +549,12 @@ class Node():
 					self.insert_data(key,value,counters_to_be_updated[key])
 					print("Inserted:  (", key,",",value,",",counters_to_be_updated[key],")")
 
-			# this is the case that the successor is equal to the predecessor, meaning that the
-			# new node that just entered the DHT is only the second node entering.
-			else:
-				pass
 			print("I have just joined the DHT, and have inserted the data I was supposed to!")
 			# print()
 			return
 
 		# if data and counters sets are empty, that means the message was sent from the node that just joined:
-		if (not data_to_be_updated) and (not counters_to_be_updated) and self.get_predecessor()[0]==new_node_ID:
+		if (not data_to_be_updated) and (not counters_to_be_updated) and self.get_predecessor()[0] == new_node_ID:
 			node_after_new_node_data 	 = self.get_data("*")
 			node_after_new_node_counters = self.replica_counter
 			data_to_be_shifted_left = {}
@@ -599,7 +636,7 @@ class Node():
 			return
 
 		# Finally, if the node is a distant successor of the node that just joined:
-		if self.get_id() != new_node_ID and self.get_predecessor()[0]!=new_node_ID:
+		if self.get_id() != new_node_ID and self.get_predecessor()[0] != new_node_ID:
 			# shift left anything that has to be shifted left:
 			for key, value in data_to_be_updated.items():
 					if self.get_data_replica_counter(key) != self.get_k():
@@ -641,10 +678,6 @@ class Node():
 			# print()
 
 			return
-
-		# Special case: The node that just entered is only the 2nd node to be entered in the DHT:
-		if self.get_successor()[0] == new_node_ID and self.get_predecessor()[0] == new_node_ID:
-			pass
 
 	def update_data_on_depart(self, sent_data, sent_key, departing_node_id):
 		if self.get_k() != 1:
