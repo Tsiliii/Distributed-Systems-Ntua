@@ -11,7 +11,7 @@ ip = "127.0.0.1"
 port = 9912
 bootstrap_ip = "127.0.0.1"
 bootstrap_port = 9910
-recv_length = 1024
+recv_length = 102400
 
 node = Node(ip, port, False)
 
@@ -122,7 +122,7 @@ def get_data():
 
 def main_loop():
 
-	file = open("insert_0.txt")
+	file = open("insert_1.txt")
 	insert_lines = file.readlines()
 	for i in range(len(insert_lines) - 1):
 		insert_lines[i] = insert_lines[i][:-2]
@@ -133,29 +133,29 @@ def main_loop():
 	file.close()
 	
 	
-	file = open("query_0.txt")
-	query_lines = file.readlines()
-	for i in range(len(query_lines) - 1):
-		query_lines[i] = query_lines[i][:-2]
-	query_lines.reverse()
-	file.close()
+	# file = open("query_1.txt")
+	# query_lines = file.readlines()
+	# for i in range(len(query_lines) - 1):
+	# 	query_lines[i] = query_lines[i][:-2]
+	# query_lines.reverse()
+	# file.close()
 	
-	file = open("requests_0.txt")
-	request_lines = file.readlines()
-	for i in range(len(request_lines) - 1):
-		request_lines[i] = request_lines[i][:-2]
+	# file = open("requests_1.txt")
+	# request_lines = file.readlines()
+	# for i in range(len(request_lines) - 1):
+	# 	request_lines[i] = request_lines[i][:-2]
 
-	for i in range(len(request_lines)):
-	    request_lines[i] = request_lines[i].split(",")
-	request_lines.reverse()
-	file.close()
+	# for i in range(len(request_lines)):
+	#     request_lines[i] = request_lines[i].split(",")
+	# request_lines.reverse()
+	# file.close()
 
-	insert_time_start = time.mktime(time.struct_time((2021,3,26,4,45,00,4,85,0)))
-	query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
-	request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
+	insert_time_start = time.mktime(time.struct_time((2021,3,26,5,33,00,4,85,0)))
+	# query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
+	# request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
 
 	while True:
-		sleep(.1)
+		sleep(0.01)
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
 
@@ -336,28 +336,38 @@ The basic functionalities of the ToyChord CLI include the following:
 		# # check all sockkets to be closed if other closed them close them aswell
 		if time.time() >= insert_time_start:
 			# start inserting
-			key,value = insert_lines.pop()
+			if insert_lines:
+				key,value = insert_lines.pop()
+			else:
+				insert_time_start += 100000000
 			node.insert(key,value,node.get_ip_address(),node.get_port(),node.get_counter())
 
-		if time.time() >= query_time_start:
-			# start quering
-			key = query_lines.pop()
-			starting_node_ID = node.get_id()
-			node.query(key, starting_node_ID,node.get_ip_address(),node.get_port(),node.get_counter())
+		# if time.time() >= query_time_start:
+		# 	# start quering
+			# if query_lines:
+			# 	key = query_lines.pop()
+			# else:
+			# 	query_time_start += 100000000
+		# 	starting_node_ID = node.get_id()
+		# 	node.query(key, starting_node_ID,node.get_ip_address(),node.get_port(),node.get_counter())
 		
-		if time.time() >= request_time_start:
-			# start requesting
-			request = request_lines.pop()
-			# if 2 terms then it's a query
-			if len(request) == 2:
-				_, key = request
-				starting_node_ID = node.get_id()
-				node.query(key, starting_node_ID,node.get_ip_address(),node.get_port(),node.get_counter())
-			# if 3 terms then it's an insert:
-			elif len(request) == 3:
-				_, key, value = request
-				key,value = insert_lines.pop()
-				node.insert(key,value,node.get_ip_address(),node.get_port(),node.get_counter())
+		# if time.time() >= request_time_start:
+		# 	# start requesting
+			# request = request_lines.pop()
+			# if request_lines:
+			# 	request = request_lines.pop()
+			# else:
+			# 	request_time_start += 100000000
+		# 	# if 2 terms then it's a query
+		# 	if len(request) == 2:
+		# 		_, key = request
+		# 		starting_node_ID = node.get_id()
+		# 		node.query(key, starting_node_ID,node.get_ip_address(),node.get_port(),node.get_counter())
+		# 	# if 3 terms then it's an insert:
+		# 	elif len(request) == 3:
+		# 		_, key, value = request
+		# 		key,value = insert_lines.pop()
+		# 		node.insert(key,value,node.get_ip_address(),node.get_port(),node.get_counter())
 
 if __name__ == '__main__':
 	for i, arg in enumerate(sys.argv):

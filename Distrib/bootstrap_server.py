@@ -10,7 +10,7 @@ from backend import Node
 #ip = "192.168.0.1"
 ip = "127.0.0.1"
 port = 9910
-recv_length = 1024
+recv_length = 102400
 
 node = Node(ip, port, True)
 
@@ -57,38 +57,35 @@ def receive(socket):
 
 def main_loop(node):
 
-	# file = open("insert_0.txt")
-	# insert_lines = file.readlines()
-	# for i in range(len(insert_lines) - 1):
-	# 	insert_lines[i] = insert_lines[i][:-2]
-	# insert_dict = {}
-	# for line in insert_lines:
-	#     items = line.split(",")
-	#     insert_dict[items[0]] = items[1]
-	# file.close()
-	#
-	#
+	file = open("insert_0.txt")
+	insert_lines = file.readlines()
+	for i in range(len(insert_lines) - 1):
+		insert_lines[i] = insert_lines[i][:-2]
+
+	for i in range(len(insert_lines)):
+	    insert_lines[i] = insert_lines[i].split(",")
+	insert_lines.reverse()
+	file.close()
+	
+	
 	# file = open("query_0.txt")
 	# query_lines = file.readlines()
 	# for i in range(len(query_lines) - 1):
-	#     query_lines[i] = query_lines[i][:-2]
-	# query_dict = {}
-	# for line in query_lines:
-	#     items = line.split(",")
-	#     query_dict[items[0]] = items[1]
+	# 	query_lines[i] = query_lines[i][:-2]
+	# query_lines.reverse()
 	# file.close()
-	#
+	
 	# file = open("requests_0.txt")
 	# request_lines = file.readlines()
 	# for i in range(len(request_lines) - 1):
-	#     request_lines[i] = request_lines[i][:-2]
-	# request_dict = {}
-	# for line in request_lines:
-	#     items = line.split(",")
-	#     request_dict[items[0]] = items[1]
+	# 	request_lines[i] = request_lines[i][:-2]
+
+	# for i in range(len(request_lines)):
+	#     request_lines[i] = request_lines[i].split(",")
+	# request_lines.reverse()
 	# file.close()
 
-	# insert_time_start = time.mktime(time.struct_time((2021,3,26,4,45,00,4,85,0)))
+	insert_time_start = time.mktime(time.struct_time((2021,3,26,5,33,00,4,85,0)))
 	# query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
 	# request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
 
@@ -321,15 +318,42 @@ The basic functionalities of the ToyChord CLI include the following:
 			print()
 
 
-		# if time.time() >= insert_time_start:
-		# 	# start inserting
-		# 	pass
+		# # check all sockkets to be closed if other closed them close them aswell
+		if time.time() >= insert_time_start:
+			# start inserting
+			if insert_lines:
+				key,value = insert_lines.pop()
+			else:
+				insert_time_start += 100000000
+			node.insert(key,value,node.get_ip_address(),node.get_port(),node.get_counter())
+
 		# if time.time() >= query_time_start:
 		# 	# start quering
-		# 	pass
+			# if query_lines:
+			# 	key = query_lines.pop()
+			# else:
+			# 	query_time_start += 100000000
+		# 	starting_node_ID = node.get_id()
+		# 	node.query(key, starting_node_ID,node.get_ip_address(),node.get_port(),node.get_counter())
+		
 		# if time.time() >= request_time_start:
 		# 	# start requesting
-		# 	pass
+			# request = request_lines.pop()
+			# if request_lines:
+			# 	request = request_lines.pop()
+			# else:
+			# 	request_time_start += 100000000	
+		# 	# if 2 terms then it's a query
+		# 	if len(request) == 2:
+		# 		_, key = request
+		# 		starting_node_ID = node.get_id()
+		# 		node.query(key, starting_node_ID,node.get_ip_address(),node.get_port(),node.get_counter())
+		# 	# if 3 terms then it's an insert:
+		# 	elif len(request) == 3:
+		# 		_, key, value = request
+		# 		key,value = insert_lines.pop()
+		# 		node.insert(key,value,node.get_ip_address(),node.get_port(),node.get_counter())
+
 if __name__ == '__main__':
 	for i, arg in enumerate(sys.argv):
 		if arg == '--k' and len(sys.argv) > i + 1 and sys.argv[i+1].isdigit():
