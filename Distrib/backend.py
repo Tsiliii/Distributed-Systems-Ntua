@@ -96,7 +96,6 @@ class Node():
 		return self.counter
 
 	def return_the_favor(self, caller_ip, caller_port, message):
-		print("I tried", caller_ip, caller_port, message, self.get_ip_address(), self.get_port())
 		# create link or use existing
 		if (caller_ip, caller_port) == (self.get_ip_address(), self.get_port()):
 			print("I got a message of ACK from myself, counter =", message)
@@ -352,13 +351,13 @@ class Node():
 		# return port%100
 		# assumes ip_address is a string and port is an int
 		digest = sha1((ip_address+':'+str(port)).encode('ascii')).hexdigest()
-		# return int(digest, 16)
-		return int(str(int(digest, 16))[:4])
+		return int(digest, 16)
+		# return int(str(int(digest, 16))[:4])
 
 	def hash(self, key):
 		digest = sha1((str(key)).encode('ascii')).hexdigest()
-		# return int(digest, 16)
-		return int(str(int(digest, 16))[:4])
+		return int(digest, 16)
+		# return int(str(int(digest, 16))[:4])
 
 	def add_socket(self, socket):
 		if socket not in self.socket_list:
@@ -887,3 +886,5 @@ class Node():
 		client_socket.setblocking(False)
 		# inform successor on port
 		return client_socket
+
+		

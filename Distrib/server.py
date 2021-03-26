@@ -11,7 +11,7 @@ ip = "127.0.0.1"
 port = 9912
 bootstrap_ip = "127.0.0.1"
 bootstrap_port = 9910
-recv_length = 102400
+recv_length = 1024
 
 node = Node(ip, port, False)
 
@@ -150,12 +150,11 @@ def main_loop():
 	# request_lines.reverse()
 	# file.close()
 
-	insert_time_start = time.mktime(time.struct_time((2021,3,26,5,33,00,4,85,0)))
+	insert_time_start = time.mktime(time.struct_time((2021,3,26,4,45,00,4,85,0)))
 	# query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
 	# request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
 
 	while True:
-		sleep(0.01)
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
 
@@ -283,49 +282,36 @@ def main_loop():
 			elif str(value).lower().startswith("help"):
 				print("""
 Welcome to ToyChord's 1.0 help!
-
 The basic functionalities of the ToyChord CLI include the following:
-
 • \033[4minsert, <key> , <value>\033[0m:
 	This function when called, inserts a (key, value) pair, where key is the
 	name of the song, and value a string (that supposedly returns the node
 	that we must connect to, in order to download said song). Example usage:
-
 	insert, Like a Rolling Stone, 1
-
 • \033[4mdelete, <key>\033[0m:
 	This function when called, deletes a the data related to key, where key
 	is the name of the song. Example usage:
-
 	delete, Like a Rolling Stone
-
 • \033[4mquery, <key>\033[0m:
 	This function when called, looks up a key in the DHT, and if it exists,
 	it returns the corresponding value, from the node that is responsible for
 	this key. You can query the special character "*", and have every
 	<key,value> pairs of every node returned. Example usages:
-
 	query, Like a Rolling Stone
 	query, *
-
 • \033[4mdepart\033[0m:
 	This function gracefully removes a node from the DHT, allowing the Chord
 	to tidily shut down its connections with the other nodesand then remove
 	it from the system.
-
 	depart
-
 • \033[4moverlay\033[0m:
 	This function prints out the nodes that exist in the DHT (each node is
 	represented by its ID), in a manner that shows the order by which the nodes
 	are connected. Example usage:
-
 	overlay
-
 • \033[4mhelp\033[0m:
 	This function prints out this message, assisting you with efficiently using
 	this CLI. Example usage:
-
 	help
 """)
 			else:
