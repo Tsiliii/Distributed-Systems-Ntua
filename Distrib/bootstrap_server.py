@@ -49,13 +49,11 @@ def receive(socket):
 			# we just did not receive anything
 			socket.close()
 			continue
-		except EOFError:
-			continue
-		# except Exception as e:
-		# 	print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
-		# 	print(socket.fileno())
-		# 	print(str(e))
-		# 	sys.exit()
+		except Exception as e:
+			print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
+			print(socket.fileno())
+			print(str(e))
+			sys.exit()
 
 def main_loop(node):
 

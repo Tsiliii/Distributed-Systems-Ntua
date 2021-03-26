@@ -114,6 +114,7 @@ class Node():
 			msg = [[self.get_id(), self.get_counter(), 12], [self.get_ip_address(), self.get_port(), message]]
 			msg = pickle.dumps(msg, -1)
 			new_socket.send(msg)
+			new_socket.close()
 		return
 
 	def set_start(self):

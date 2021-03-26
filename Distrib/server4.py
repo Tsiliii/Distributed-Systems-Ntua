@@ -3,6 +3,7 @@ import select
 import sys
 import pickle
 import errno
+import time
 from time import sleep
 from backend import Node
 
@@ -120,6 +121,42 @@ def get_data():
 
 
 def main_loop():
+
+	# file = open("insert_0.txt")
+	# insert_lines = file.readlines()
+	# for i in range(len(insert_lines) - 1):
+	# 	insert_lines[i] = insert_lines[i][:-2]
+	# insert_dict = {}
+	# for line in insert_lines:
+	#     items = line.split(",")
+	#     insert_dict[items[0]] = items[1]
+	# file.close()
+	#
+	#
+	# file = open("query_0.txt")
+	# query_lines = file.readlines()
+	# for i in range(len(query_lines) - 1):
+	#     query_lines[i] = query_lines[i][:-2]
+	# query_dict = {}
+	# for line in query_lines:
+	#     items = line.split(",")
+	#     query_dict[items[0]] = items[1]
+	# file.close()
+	#
+	# file = open("requests_0.txt")
+	# request_lines = file.readlines()
+	# for i in range(len(request_lines) - 1):
+	#     request_lines[i] = request_lines[i][:-2]
+	# request_dict = {}
+	# for line in request_lines:
+	#     items = line.split(",")
+	#     request_dict[items[0]] = items[1]
+	# file.close()
+
+	# insert_time_start = time.mktime(time.struct_time((2021,3,26,4,45,00,4,85,0)))
+    # query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
+    # request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
+
 	while True:
 		sleep(.1)
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
@@ -133,39 +170,50 @@ def main_loop():
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				peer_socket, peer_address = node.get_sockets()[0].accept()
 				# wait for info on port
-				[[peer_id, _, code], pred] = receive(peer_socket)
-				print("just received a new connection from", peer_id, "with info", pred)
-				node.update_dht(pred[0], pred[1], peer_id, code, peer_socket)
-				print()
+				[[peer_id, _, code], info] = receive(peer_socket)
+				if code == 12:
+					[peer_ip, peer_port, message] = info
+					print("I got a message of ACK from ip",peer_ip,",port",peer_port,": counter =", message)
+					node.set_end()
+					if peer_socket not in node.get_sockets():
+						peer_socket.close()
+				elif code == 3:
+					[_, succ] = info
+					node.update_dht(succ[0], succ[1], succ[2], code, peer_socket)
+				else:
+					pred = info
+					print("just received a new connection from", peer_id, "with info", pred)
+					node.update_dht(pred[0], pred[1], peer_id, code, peer_socket)
+					print()
 			elif notified_socket not in node.get_sockets():
 				continue
 			else:
 				[[peer_id, count, code], info] = receive(notified_socket)
-				print(code, info)
+				# print(code, info)
 				# check for new successor
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
 					node.update_dht(succ[0], succ[1], succ[2], code)
 				#insert code
 				elif code == 4:
-					[key,value] = info
-					node.insert(key,value)
+					[key,value, peer_ip_address, peer_port, counter] = info
+					node.insert(key,value,peer_ip_address, peer_port, counter)
 				#delete code
 				elif code == 5:
 					[key] = info
 					node.delete(key)
 				#insert replica code
 				elif code == 6:
-					[key, value, peer_ip, peer_port, peer_id, currentk] = info
-					node.replica_insert(key, value, peer_ip, peer_port, peer_id, currentk)
+					[key, value, peer_ip, peer_port, peer_id, currentk, peer_ip_address, old_peer_port, counter] = info
+					node.replica_insert(key, value, peer_ip, peer_port, peer_id, currentk, peer_ip_address, old_peer_port, counter)
 				#delete replica code
 				elif code == 7:
 					[key, peer_ip, peer_port, peer_id, currentk] = info
 					node.replica_delete(key, peer_ip, peer_port, peer_id, currentk)
 				#query code
 				elif code == 8:
-					[key, starting_node_ID, round_trip] = info
-					node.query(key, starting_node_ID, made_a_round_trip = round_trip)
+					[key, starting_node_ID ,peer_ip_address, peer_port, counter, round_trip, found_number] = info
+					node.query(key, starting_node_ID ,peer_ip_address, peer_port, counter, round_trip, found_number)
 				#update data on predecessor departing:
 				elif code == 9:
 					[sent_data, send_key, departing_node_id] = info
@@ -179,7 +227,19 @@ def main_loop():
 					[list_of_nodes] = info
 					# print(list_of_nodes)
 					node.overlay(list_of_nodes)
-				print()
+				# ACK code
+				elif code == 12:
+					[peer_ip, peer_port, message] = info
+					print("I got a message of ACK from ip",peer_ip,",port",peer_port,": counter =", message)
+					node.set_end()
+			print()
+
+		#Expirements
+		# if time == smth:
+		# 	node.set_start()
+		# pops
+		# if its last item so something interesting
+		# i.e. track its counter.
 
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]
@@ -194,13 +254,17 @@ def main_loop():
 				if (len(temporary) > 2):
 					key = temporary[1].strip()
 					some_value = temporary[2].strip()
-					node.insert(key,some_value)
+					node.insert(key,some_value,node.get_ip_address(),node.get_port(),node.get_counter())
+				else:
+					print("Wrong Input")
 			elif str(value).lower().startswith("delete"):
 				temporary = str(value).split(',')
 				if (len(temporary) > 1):
 					key = temporary[1].strip()
 					node.delete(key)
 			elif str(value).lower().startswith("debug"):
+				print(node.get_predecessor())
+				print(node.get_successor())
 				for sock in node.get_sockets():
 					print(sock)
 			elif str(value).lower().startswith("query"):
@@ -208,7 +272,9 @@ def main_loop():
 				if (len(temporary) > 1):
 					starting_node_ID = node.get_id()
 					key = temporary[1].strip()
-					node.query(key, starting_node_ID)
+					node.query(key, starting_node_ID,node.get_ip_address(),node.get_port(),node.get_counter())
+				else:
+					print("Wrong Input")
 			elif str(value).lower().startswith("overlay"):
 				succ = node.get_successor()
 				if succ:
@@ -272,14 +338,14 @@ The basic functionalities of the ToyChord CLI include the following:
 
 
 if __name__ == '__main__':
-	# print(f"Arguments count: {len(sys.argv)}")
-	# for i, arg in enumerate(sys.argv):
-	# 	print(f"Argument {i:>6}: {arg}")
+	for i, arg in enumerate(sys.argv):
+		if i == 1:
+			port = int(arg)
 	create_server_socket()
 	connect_to_dht()
 	sleep(1)
 	print()
 	print("Hello there (General Kenobi)! I have just joined! Gib data pls?")
 	print()
-	# get_data()
+	get_data()
 	main_loop()
