@@ -158,7 +158,7 @@ def main_loop():
     # request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
 
 	while True:
-		sleep(.1)
+		sleep(2)
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
 

@@ -10,7 +10,7 @@ from backend import Node
 #ip = "192.168.0.1"
 ip = "127.0.0.1"
 port = 9910
-recv_length = 102400
+recv_length = 1024000
 
 node = Node(ip, port, True)
 
@@ -59,22 +59,21 @@ def main_loop(node):
 
 	file = open("insert_0.txt")
 	insert_lines = file.readlines()
-	for i in range(len(insert_lines) - 1):
-		insert_lines[i] = insert_lines[i][:-2]
+	for i in range(len(insert_lines)):
+		insert_lines[i] = insert_lines[i].strip()
 
 	for i in range(len(insert_lines)):
 	    insert_lines[i] = insert_lines[i].split(",")
 	insert_lines.reverse()
 	file.close()
-	
-	
+	print(len(insert_lines))
 	# file = open("query_0.txt")
 	# query_lines = file.readlines()
 	# for i in range(len(query_lines) - 1):
 	# 	query_lines[i] = query_lines[i][:-2]
 	# query_lines.reverse()
 	# file.close()
-	
+
 	# file = open("requests_0.txt")
 	# request_lines = file.readlines()
 	# for i in range(len(request_lines) - 1):
@@ -85,11 +84,12 @@ def main_loop(node):
 	# request_lines.reverse()
 	# file.close()
 
-	insert_time_start = time.mktime(time.struct_time((2021,3,26,5,33,00,4,85,0)))
+	# insert_time_start = time.mktime(time.struct_time((2021,3,26,11,57,00,4,85,0)))
 	# query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
 	# request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
 
 	while True:
+		sleep(2)
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
 
@@ -128,6 +128,7 @@ def main_loop(node):
 				continue
 			else:
 				[[peer_id, count, code], info] = receive(notified_socket)
+				print(code, info)
 				# check for new successor
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
@@ -319,13 +320,14 @@ The basic functionalities of the ToyChord CLI include the following:
 
 
 		# # check all sockkets to be closed if other closed them close them aswell
-		if time.time() >= insert_time_start:
-			# start inserting
-			if insert_lines:
-				key,value = insert_lines.pop()
-			else:
-				insert_time_start += 100000000
-			node.insert(key,value,node.get_ip_address(),node.get_port(),node.get_counter())
+		# if time.time() >= insert_time_start:
+		# 	# start inserting
+		# 	if insert_lines:
+		# 		key,value = insert_lines.pop()
+		# 		node.insert(key,value,node.get_ip_address(),node.get_port(),node.get_counter())
+		# 	else:
+		# 		insert_time_start += 100000000
+
 
 		# if time.time() >= query_time_start:
 		# 	# start quering
@@ -335,14 +337,14 @@ The basic functionalities of the ToyChord CLI include the following:
 			# 	query_time_start += 100000000
 		# 	starting_node_ID = node.get_id()
 		# 	node.query(key, starting_node_ID,node.get_ip_address(),node.get_port(),node.get_counter())
-		
+
 		# if time.time() >= request_time_start:
 		# 	# start requesting
 			# request = request_lines.pop()
 			# if request_lines:
 			# 	request = request_lines.pop()
 			# else:
-			# 	request_time_start += 100000000	
+			# 	request_time_start += 100000000
 		# 	# if 2 terms then it's a query
 		# 	if len(request) == 2:
 		# 		_, key = request

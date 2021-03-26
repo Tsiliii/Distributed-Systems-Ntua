@@ -886,5 +886,3 @@ class Node():
 		client_socket.setblocking(False)
 		# inform successor on port
 		return client_socket
-
-		
