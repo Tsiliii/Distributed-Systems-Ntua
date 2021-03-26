@@ -110,6 +110,8 @@ def main_loop(node):
 	    insert_lines[i] = insert_lines[i].split(",")
 	insert_lines.reverse()
 	file.close()
+
+	f = open("out_k" + str(node.k) + "_" + node.consistency + ".txt","w+")
 	# file = open("query_0.txt")
 	# query_lines = file.readlines()
 	# for i in range(len(query_lines) - 1):
@@ -127,7 +129,7 @@ def main_loop(node):
 	# request_lines.reverse()
 	# file.close()
 
-	insert_time_start = time.mktime(time.struct_time((2021,3,26,19,12,00,4,85,0)))
+	insert_time_start = time.mktime(time.struct_time((2021,3,26,21,17,00,4,85,0)))
 	# query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
 	# request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
 	sleep(2.1)
@@ -362,18 +364,20 @@ The basic functionalities of the ToyChord CLI include the following:
 				print("Started",node.start_time)
 				print("Finished", node.end_time)
 				print("Difference in seconds", node.end_time - node.start_time)
+				f.write(str(node.end_time - node.start_time))
+				f.close()
 			else:
 				print("You entered:",value,", did you make a mistake?")
 			print()
 
 		# insert_lines = []
 
-		if Begin == False:
-			Begin = True
-			node.set_start()
 
 		# # check all sockkets to be closed if other closed them close them aswell
 		if time.time() >= insert_time_start:
+			if Begin == False:
+				Begin = True
+				node.set_start()
 			# start inserting
 			if insert_lines:
 				key,value = insert_lines.pop()

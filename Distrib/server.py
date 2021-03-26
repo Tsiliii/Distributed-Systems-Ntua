@@ -226,6 +226,9 @@ def main_loop():
 	file.close()
 	print(len(insert_lines))
 
+	f = open("out" +  str(int(port % 9910 / 2))  + "_k" + str(node.k) + "_" + node.consistency + ".txt","w+")
+	# f = open("out" + str(int(port % 9910 / 2)) + ".txt","w+")
+
 	# file = open("query_1.txt")
 	# query_lines = file.readlines()
 	# for i in range(len(query_lines) - 1):
@@ -243,7 +246,7 @@ def main_loop():
 	# request_lines.reverse()
 	# file.close()
 
-	insert_time_start = time.mktime(time.struct_time((2021,3,26,19,12,00,4,85,0)))
+	insert_time_start = time.mktime(time.struct_time((2021,3,26,21,17,00,4,85,0)))
 	# query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
 	# request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
 	sleep(2)
@@ -252,9 +255,6 @@ def main_loop():
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
 
-		if Begin == False:
-			Begin = True
-			node.set_start()
 
 		# iterate over notified ones
 		for notified_socket in read_sockets:
@@ -421,6 +421,8 @@ The basic functionalities of the ToyChord CLI include the following:
 				print("Started",node.start_time)
 				print("Finished", node.end_time)
 				print("Difference in seconds", node.end_time - node.start_time)
+				f.write(str(node.end_time - node.start_time))
+				f.close()
 			else:
 				print("You entered: ",value,", did you make a mistake?")
 			print()
@@ -430,6 +432,9 @@ The basic functionalities of the ToyChord CLI include the following:
 
 		# insert_lines = []
 		if time.time() >= insert_time_start:
+			if Begin == False:
+				Begin = True
+				node.set_start()
 			# start inserting
 			if insert_lines:
 				key,value = insert_lines.pop()
