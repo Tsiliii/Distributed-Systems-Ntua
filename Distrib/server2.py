@@ -7,11 +7,13 @@ import time
 from time import sleep
 from backend import Node
 
-ip = "127.0.0.2"
-port = 9914
+ip = "127.0.0.1"
+port = 9916	
 bootstrap_ip = "127.0.0.1"
 bootstrap_port = 9910
 recv_length = 1024
+
+HEADERSIZE = 10
 
 node = Node(ip, port, False)
 
@@ -44,6 +46,7 @@ def connect_to_dht():
 	# inform bootstrap of port
 	msg = [[node.get_id(), node.get_counter(), 0], [node.get_ip_address(), node.get_port()]]
 	msg = pickle.dumps(msg, -1)
+	msg = bytes(f"{len(msg):<{HEADERSIZE}}", 'utf-8')+msg
 	client_socket.send(msg)
 
 	# three cases:
@@ -60,7 +63,13 @@ def connect_to_dht():
 			if notified_socket == client_socket:
 				successor_id = node.compute_id(bootstrap_ip, bootstrap_port)
 				# wait until info about predecessor and successor arrives
-				[_, [_, succ, [answer_k, answer_consistency]]] = receive(client_socket)
+				# answer = special_receive(client_socket)
+				answer = receive(client_socket)
+
+				if answer == False:
+					continue
+
+				[_, [_, succ, [answer_k, answer_consistency]]] = answer
 				# set consistency and k
 				node.set_consistency(answer_consistency)
 				node.set_k(answer_k)
@@ -71,7 +80,13 @@ def connect_to_dht():
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				predecessor_socket, _ = node.get_sockets()[0].accept()
 				# wait until info about predecessor and successor arrives
-				[_, [pred, succ, [answer_k, answer_consistency]]] = receive(predecessor_socket)
+
+				answer = receive(client_socket)
+				if answer == False:
+					print("2")
+					continue
+
+				[_, [pred, succ, [answer_k, answer_consistency]]] = answer
 				# set consistency and k
 				node.set_consistency(answer_consistency)
 				node.set_k(answer_k)
@@ -81,31 +96,89 @@ def connect_to_dht():
 				else:
 					node.join([pred[0], pred[1], predecessor_socket], succ)
 
+
+def special_receive(socket):
+
+		while True:
+			try:
+				msg = socket.recv(recv_length)
+				msg = pickle.loads(msg)
+				# if we received no data, client gracefully closed a connection
+				if not msg:
+					return False
+				return msg
+			except IOError as e:
+				# This is normal on non blocking connections - when there are no incoming data error is going to be raised
+		        # Some operating systems will indicate that using AGAIN, and some using WOULDBLOCK error code
+		        # We are going to check for both - if one of them - that's expected, means no incoming data, continue as normal
+		        # If we got different error code - something happened
+				if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
+					print('Reading error: {}'.format(str(e)))
+					sys.exit()
+				# we just did not receive anything
+				continue
+			except Exception as e:
+				print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
+				print(socket.fileno())
+				print(str(e))
+				sys.exit()
+
 # function for receiving a message from a socket
 def receive(socket):
 	while True:
 		try:
-			msg = socket.recv(recv_length)
-			msg = pickle.loads(msg)
-			# if we received no data, client gracefully closed a connection
-			if not msg:
-				return False
-			return msg
+			# print(socket)
+			full_msg = b''
+			new_msg = True
+			while True:
+				if new_msg == True:
+					msg = socket.recv(HEADERSIZE)
+				else:
+					msg = socket.recv(1)
+				print(msg)
+				if msg == b'':
+					return False
+				if new_msg:
+					# print("new msg len:",msg[:HEADERSIZE])
+					msglen = int(msg[:HEADERSIZE])
+					# print(msglen)
+					new_msg = False
+				# print(f"full message length: {msglen}")
+				full_msg += msg
+				# print(len(full_msg))
+				if len(full_msg)-HEADERSIZE == msglen:
+					# print("full msg recvd")
+					# print(full_msg[HEADERSIZE:])
+					answer = full_msg[HEADERSIZE:]
+					# print(pickle.loads(full_msg[HEADERSIZE:]))
+					new_msg = True
+					full_msg = b""
+					return(pickle.loads(answer))
+
+			# msg = socket.recv(recv_length)
+			# msg = pickle.loads(msg)
+			# # if we received no data, client gracefully closed a connection
+			# if not msg:
+			# 	return False
+			# print(msg)
+			# return msg
 		except IOError as e:
 			# This is normal on non blocking connections - when there are no incoming data error is going to be raised
-	        # Some operating systems will indicate that using AGAIN, and some using WOULDBLOCK error code
-	        # We are going to check for both - if one of them - that's expected, means no incoming data, continue as normal
-	        # If we got different error code - something happened
+			# Some operating systems will indicate that using AGAIN, and some using WOULDBLOCK error code
+			# We are going to check for both - if one of them - that's expected, means no incoming data, continue as normal
+			# If we got different error code - something happened
 			if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
 				print('Reading error: {}'.format(str(e)))
 				sys.exit()
 			# we just did not receive anything
+			socket.close()
 			continue
 		except Exception as e:
 			print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
 			print(socket.fileno())
 			print(str(e))
 			sys.exit()
+
 
 """
 	This function runs after the node is connected to the DHT, and needs to be updated on the
@@ -116,49 +189,47 @@ def get_data():
 	succ = node.get_successor()
 	msg = [[node.get_id(), node.get_counter(), 10], [node.get_id(), {}, {}, node.get_id()]]
 	msg = pickle.dumps(msg, -1)
+	msg = bytes(f"{len(msg):<{HEADERSIZE}}", 'utf-8')+msg
 	succ[2].send(msg)
 	return
 
 
 def main_loop():
 
-	# file = open("insert_0.txt")
+	# file = open("insert_1.txt")
 	# insert_lines = file.readlines()
-	# for i in range(len(insert_lines) - 1):
-	# 	insert_lines[i] = insert_lines[i][:-2]
-	# insert_dict = {}
-	# for line in insert_lines:
-	#     items = line.split(",")
-	#     insert_dict[items[0]] = items[1]
+	# for i in range(len(insert_lines)):
+	# 	insert_lines[i] = insert_lines[i].strip()
+	#
+	# for i in range(len(insert_lines)):
+	#     insert_lines[i] = insert_lines[i].split(",")
+	# insert_lines.reverse()
 	# file.close()
-	#
-	#
-	# file = open("query_0.txt")
+	# print(len(insert_lines))
+
+	# file = open("query_1.txt")
 	# query_lines = file.readlines()
 	# for i in range(len(query_lines) - 1):
-	#     query_lines[i] = query_lines[i][:-2]
-	# query_dict = {}
-	# for line in query_lines:
-	#     items = line.split(",")
-	#     query_dict[items[0]] = items[1]
+	# 	query_lines[i] = query_lines[i][:-2]
+	# query_lines.reverse()
 	# file.close()
-	#
-	# file = open("requests_0.txt")
+
+	# file = open("requests_1.txt")
 	# request_lines = file.readlines()
 	# for i in range(len(request_lines) - 1):
-	#     request_lines[i] = request_lines[i][:-2]
-	# request_dict = {}
-	# for line in request_lines:
-	#     items = line.split(",")
-	#     request_dict[items[0]] = items[1]
+	# 	request_lines[i] = request_lines[i][:-2]
+
+	# for i in range(len(request_lines)):
+	#     request_lines[i] = request_lines[i].split(",")
+	# request_lines.reverse()
 	# file.close()
 
-	# insert_time_start = time.mktime(time.struct_time((2021,3,26,4,45,00,4,85,0)))
-    # query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
-    # request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
-
+	# insert_time_start = time.mktime(time.struct_time((2021,3,26,12,16,00,4,85,0)))
+	# query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
+	# request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
+	sleep(2)
 	while True:
-		sleep(2)
+		# sleep(.5)
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
 
@@ -170,7 +241,10 @@ def main_loop():
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				peer_socket, peer_address = node.get_sockets()[0].accept()
 				# wait for info on port
-				[[peer_id, _, code], info] = receive(peer_socket)
+				answer = receive(peer_socket)
+				if answer == False:
+					continue
+				[[peer_id, _, code], info] = answer
 				if code == 12:
 					[peer_ip, peer_port, message] = info
 					print("I got a message of ACK from ip",peer_ip,",port",peer_port,": counter =", message)
@@ -188,7 +262,10 @@ def main_loop():
 			elif notified_socket not in node.get_sockets():
 				continue
 			else:
-				[[peer_id, count, code], info] = receive(notified_socket)
+				answer = receive(notified_socket)
+				if answer == False:
+					continue
+				[[peer_id, count, code], info] = answer
 				# print(code, info)
 				# check for new successor
 				if code == 0 or code == 2 or code == 3:
@@ -286,56 +363,78 @@ def main_loop():
 			elif str(value).lower().startswith("help"):
 				print("""
 Welcome to ToyChord's 1.0 help!
-
 The basic functionalities of the ToyChord CLI include the following:
-
 • \033[4minsert, <key> , <value>\033[0m:
-    This function when called, inserts a (key, value) pair, where key is the
-    name of the song, and value a string (that supposedly returns the node
-    that we must connect to, in order to download said song). Example usage:
-
+	This function when called, inserts a (key, value) pair, where key is the
+	name of the song, and value a string (that supposedly returns the node
+	that we must connect to, in order to download said song). Example usage:
 	insert, Like a Rolling Stone, 1
-
 • \033[4mdelete, <key>\033[0m:
-    This function when called, deletes a the data related to key, where key
-    is the name of the song. Example usage:
-
+	This function when called, deletes a the data related to key, where key
+	is the name of the song. Example usage:
 	delete, Like a Rolling Stone
-
 • \033[4mquery, <key>\033[0m:
-    This function when called, looks up a key in the DHT, and if it exists,
-    it returns the corresponding value, from the node that is responsible for
-    this key. You can query the special character "*", and have every
-    <key,value> pairs of every node returned. Example usages:
-
+	This function when called, looks up a key in the DHT, and if it exists,
+	it returns the corresponding value, from the node that is responsible for
+	this key. You can query the special character "*", and have every
+	<key,value> pairs of every node returned. Example usages:
 	query, Like a Rolling Stone
 	query, *
-
 • \033[4mdepart\033[0m:
-    This function gracefully removes a node from the DHT, allowing the Chord
-    to tidily shut down its connections with the other nodesand then remove
-    it from the system.
-
+	This function gracefully removes a node from the DHT, allowing the Chord
+	to tidily shut down its connections with the other nodesand then remove
+	it from the system.
 	depart
-
 • \033[4moverlay\033[0m:
-    This function prints out the nodes that exist in the DHT (each node is
-    represented by its ID), in a manner that shows the order by which the nodes
-    are connected. Example usage:
-
+	This function prints out the nodes that exist in the DHT (each node is
+	represented by its ID), in a manner that shows the order by which the nodes
+	are connected. Example usage:
 	overlay
-
 • \033[4mhelp\033[0m:
-    This function prints out this message, assisting you with efficiently using
-    this CLI. Example usage:
-
+	This function prints out this message, assisting you with efficiently using
+	this CLI. Example usage:
 	help
 """)
 			else:
 				print(f"You entered: {value}, did you make a mistake?")
 			print()
-		# check all sockkets to be closed if other closed them close them aswell
 
+
+		# # check all sockkets to be closed if other closed them close them aswell
+		# if time.time() >= insert_time_start:
+		# 	# start inserting
+		# 	if insert_lines:
+		# 		key,value = insert_lines.pop()
+		# 		node.insert(key,value,node.get_ip_address(),node.get_port(),node.get_counter())
+		# 	else:
+		# 		insert_time_start += 100000000
+
+		# if time.time() >= query_time_start:
+		# 	# start quering
+			# if query_lines:
+			# 	key = query_lines.pop()
+			# else:
+			# 	query_time_start += 100000000
+		# 	starting_node_ID = node.get_id()
+		# 	node.query(key, starting_node_ID,node.get_ip_address(),node.get_port(),node.get_counter())
+
+		# if time.time() >= request_time_start:
+		# 	# start requesting
+			# request = request_lines.pop()
+			# if request_lines:
+			# 	request = request_lines.pop()
+			# else:
+			# 	request_time_start += 100000000
+		# 	# if 2 terms then it's a query
+		# 	if len(request) == 2:
+		# 		_, key = request
+		# 		starting_node_ID = node.get_id()
+		# 		node.query(key, starting_node_ID,node.get_ip_address(),node.get_port(),node.get_counter())
+		# 	# if 3 terms then it's an insert:
+		# 	elif len(request) == 3:
+		# 		_, key, value = request
+		# 		key,value = insert_lines.pop()
+		# 		node.insert(key,value,node.get_ip_address(),node.get_port(),node.get_counter())
 
 if __name__ == '__main__':
 	for i, arg in enumerate(sys.argv):

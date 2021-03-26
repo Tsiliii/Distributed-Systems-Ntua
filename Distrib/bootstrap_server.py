@@ -10,7 +10,8 @@ from backend import Node
 #ip = "192.168.0.1"
 ip = "127.0.0.1"
 port = 9910
-recv_length = 1024000
+recv_length = 1024
+HEADERSIZE = 10
 
 node = Node(ip, port, True)
 
@@ -32,12 +33,48 @@ def create_server_socket(node):
 def receive(socket):
 	while True:
 		try:
-			msg = socket.recv(recv_length)
-			msg = pickle.loads(msg)
-			# if we received no data, client gracefully closed a connection
-			if not msg:
-				return False
-			return msg
+			counter = 0
+			full_msg = b''
+			new_msg = True
+			while True:
+				if new_msg == True:
+					msg = socket.recv(HEADERSIZE)
+				else:
+					msg = socket.recv(1)
+				if msg == b'':
+					socket.close()
+					if node.get_successor()[0] != node.get_predecessor()[0]:
+						node.remove_socket(socket)
+					elif node.get_successor()[0] == node.get_predecessor()[0]:
+						node.set_predecessor(None)
+						node.set_successor(None)
+						node.remove_socket(socket)
+					return False
+				print(msg)
+				if new_msg:
+					# print("new msg len:",msg[:HEADERSIZE])
+					msglen = int(msg[:HEADERSIZE])
+					# print(msglen)
+					new_msg = False
+				# print(f"full message length: {msglen}")
+				full_msg += msg
+				# print(full_msg)
+				if len(full_msg)-HEADERSIZE == msglen:
+					# print("full msg recvd")
+					# print(full_msg[HEADERSIZE:])
+					# print("I am returning", pickle.loads(full_msg[HEADERSIZE:]))
+					answer = pickle.loads(full_msg[HEADERSIZE:])
+					new_msg = True
+					full_msg = b""
+					return(answer)
+
+			# msg = socket.recv(recv_length)
+			# msg = pickle.loads(msg)
+			# # if we received no data, client gracefully closed a connection
+			# if not msg:
+			# 	return False
+			# print(msg)
+			# return msg
 		except IOError as e:
 			# This is normal on non blocking connections - when there are no incoming data error is going to be raised
 			# Some operating systems will indicate that using AGAIN, and some using WOULDBLOCK error code
@@ -50,10 +87,11 @@ def receive(socket):
 			socket.close()
 			continue
 		except Exception as e:
-			print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
-			print(socket.fileno())
-			print(str(e))
-			sys.exit()
+			pass
+			# print("Some error occured, probably some node didn't depart correctly: ".format(str(e)))
+			# print(socket.fileno())
+			# print(str(e))
+			# sys.exit()
 
 def main_loop(node):
 
@@ -84,12 +122,12 @@ def main_loop(node):
 	# request_lines.reverse()
 	# file.close()
 
-	# insert_time_start = time.mktime(time.struct_time((2021,3,26,11,57,00,4,85,0)))
+	insert_time_start = time.mktime(time.struct_time((2021,3,26,12,16,00,4,85,0)))
 	# query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
 	# request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
-
+	sleep(2.1)
 	while True:
-		sleep(2)
+		# sleep(.5)
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
 
@@ -101,10 +139,13 @@ def main_loop(node):
 				# the returned value is a pair (conn, address) where conn is a new socket object usable to send and
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				peer_socket, _ = notified_socket.accept()
-
 				# receive port number
-				[[peer_id, _, code], info] = receive(peer_socket)
-
+				print('Accept')
+				answer = receive(peer_socket)
+				print('receive')
+				if answer == False:
+					continue
+				[[peer_id, _, code], info] = answer
 				if code == 12:
 					[peer_ip, peer_port, message] = info
 					print("I got a message of ACK from ip",peer_ip,",port",peer_port,": counter =", message)
@@ -127,8 +168,11 @@ def main_loop(node):
 			elif notified_socket not in node.get_sockets():
 				continue
 			else:
-				[[peer_id, count, code], info] = receive(notified_socket)
-				print(code, info)
+				answer = receive(notified_socket)
+				if answer == False:
+					continue
+				[[peer_id, count, code], info] = answer
+				# print(code, info)
 				# check for new successor
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
@@ -320,13 +364,13 @@ The basic functionalities of the ToyChord CLI include the following:
 
 
 		# # check all sockkets to be closed if other closed them close them aswell
-		# if time.time() >= insert_time_start:
-		# 	# start inserting
-		# 	if insert_lines:
-		# 		key,value = insert_lines.pop()
-		# 		node.insert(key,value,node.get_ip_address(),node.get_port(),node.get_counter())
-		# 	else:
-		# 		insert_time_start += 100000000
+		if time.time() >= insert_time_start:
+			# start inserting
+			if insert_lines:
+				key,value = insert_lines.pop()
+				node.insert(key,value,node.get_ip_address(),node.get_port(),node.get_counter())
+			else:
+				insert_time_start += 100000000
 
 
 		# if time.time() >= query_time_start:
