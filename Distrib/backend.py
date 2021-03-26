@@ -413,6 +413,7 @@ class Node():
 			return True
 		successor_id = successor[0]
 		id = self.get_id()
+		print(x, successor_id, id)
 		#print("in_between_succ", x < successor_id and successor_id < id, successor_id < id and id < x, id < x and x < successor_id)
 		return (x < successor_id and successor_id < id) or (successor_id < id and id < x) or (id < x and x < successor_id)
 
@@ -453,10 +454,11 @@ class Node():
 			if former_predecessor[0] != self.get_successor()[0]:
 				self.remove_socket(former_predecessor[2])
 				former_predecessor[2].close()
-				# print("1,",self.get_id(), "closed", former_predecessor)
+				print("1,",self.get_id(), "closed", former_predecessor)
 			self.add_socket(peer_socket)
 			self.set_predecessor([peer_id, [peer_ip_address, peer_port], peer_socket])
 			print("informed of a predecessor: ", peer_id)
+			print("End")
 			return
 
 		elif code == 3:
@@ -484,7 +486,6 @@ class Node():
 				former_successor[2].shutdown(socket.SHUT_RDWR)
 				former_successor[2].close()
 				# print("3,",self.get_id(), "closed", former_successor)
-
 			# set the new successor
 			self.add_socket(peer_socket)
 			self.set_successor([peer_id, [peer_ip_address, peer_port], peer_socket])
@@ -496,6 +497,7 @@ class Node():
 			# print("Sending to my succ 0",self.get_successor(),msg)
 			msg = pickle.dumps(msg, -1)
 			msg = bytes(f"{len(msg):<{HEADERSIZE}}", 'utf-8')+msg
+
 			self.get_successor()[2].sendall(msg)
 			print("found_successor: ", peer_id)
 
@@ -529,12 +531,12 @@ class Node():
 				self.remove_socket(former_successor[2])
 				former_successor[2].shutdown(socket.SHUT_RDWR)
 				former_successor[2].close()
-				# print("3,",self.get_id(), "closed", former_successor)
+				print("3,",self.get_id(), "closed", former_successor)
 				self.add_socket(peer_socket)
 			self.set_successor([peer_id,[peer_ip_address, peer_port], peer_socket])
 
 			msg = [[self.get_id(), self.get_counter(), 3], [[self.get_ip_address(), self.get_port(), self.get_id()], [self.get_ip_address(), self.get_port(), self.get_id()]]]
-			# print("Sending to my successor 3",self.get_successor(),msg)
+			print("Sending to my successor 3",self.get_successor(),msg)
 			msg = pickle.dumps(msg, -1)
 			msg = bytes(f"{len(msg):<{HEADERSIZE}}", 'utf-8')+msg
 			self.get_successor()[2].sendall(msg)
@@ -547,6 +549,7 @@ class Node():
 			msg = bytes(f"{len(msg):<{HEADERSIZE}}", 'utf-8')+msg
 			print("Found info about node:", peer_id)
 			self.get_successor()[2].sendall(msg)
+			return
 
 	def join(self, pred, succ, bootstrap_socket=None):
 		self.add_socket(pred[2])

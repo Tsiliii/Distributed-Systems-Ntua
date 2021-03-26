@@ -42,6 +42,10 @@ def receive(socket):
 				else:
 					msg = socket.recv(1)
 				if msg == b'':
+					if counter == 0:
+						counter += 1
+						continue
+					print("Receive closing socket",socket)
 					socket.close()
 					if node.get_successor()[0] != node.get_predecessor()[0]:
 						node.remove_socket(socket)
@@ -49,8 +53,9 @@ def receive(socket):
 						node.set_predecessor(None)
 						node.set_successor(None)
 						node.remove_socket(socket)
+						socket.close()
 					return False
-				print(msg)
+				# print(msg)
 				if new_msg:
 					# print("new msg len:",msg[:HEADERSIZE])
 					msglen = int(msg[:HEADERSIZE])
@@ -121,7 +126,7 @@ def main_loop(node):
 	# request_lines.reverse()
 	# file.close()
 
-	insert_time_start = time.mktime(time.struct_time((2021,3,26,12,16,00,4,85,0)))
+	insert_time_start = time.mktime(time.struct_time((2021,3,26,18,28,00,4,85,0)))
 	# query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
 	# request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
 	sleep(2.1)
@@ -139,9 +144,7 @@ def main_loop(node):
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				peer_socket, _ = notified_socket.accept()
 				# receive port number
-				print('Accept')
 				answer = receive(peer_socket)
-				print('receive')
 				if answer == False:
 					continue
 				[[peer_id, _, code], info] = answer
@@ -280,21 +283,21 @@ def main_loop(node):
 ███████████████▄▄▄███████████████████
 █████████████████████████████████████
 
-					  ______
-					<((((((((
-					/      . }
-					;--..--._|}
+                      ______
+                    <((((((((
+                    /      . }
+                    ;--..--._|}
 ( \                 '--/\--'  )
  \ \                | '-'  :'|
   \ \               . -==- .-|
    \ \               \.__.'   \--._
    [\ \          __.--|       //  _/'--._
    \ \ \       .'-._ ('-----'/ __/       |
-	\ \ \     /   __>|      | '--.       |
-	 \ \ \   |   \   |     /    /       /
-	  \ '\ /     \  |     |  _/       /
-	   \  \       \ |     | /        /
-		\  \       \       /
+    \ \ \     /   __>|      | '--.       |
+     \ \ \   |   \   |     /    /       /
+      \ '\ /     \  |     |  _/       /
+       \  \       \ |     | /        /
+        \  \       \       /
 					""")
 					return
 				else:
@@ -355,10 +358,14 @@ The basic functionalities of the ToyChord CLI include the following:
 
 	help
 """)
+			elif str(value).lower().startswith("time"):
+				print("Started",node.start_time)
+				print("Finished", node.end_time)
 			else:
 				print("You entered:",value,", did you make a mistake?")
 			print()
 
+		# insert_lines = []
 
 		# # check all sockkets to be closed if other closed them close them aswell
 		if time.time() >= insert_time_start:

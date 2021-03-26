@@ -15,7 +15,6 @@ recv_length = 1024
 
 HEADERSIZE = 10
 
-node = Node(ip, port, False)
 
 def create_server_socket():
 	# create a socket that will be used by other nodes when they first connect
@@ -47,6 +46,7 @@ def connect_to_dht():
 	msg = [[node.get_id(), node.get_counter(), 0], [node.get_ip_address(), node.get_port()]]
 	msg = pickle.dumps(msg, -1)
 	msg = bytes(f"{len(msg):<{HEADERSIZE}}", 'utf-8')+msg
+
 	client_socket.send(msg)
 
 	# three cases:
@@ -58,6 +58,10 @@ def connect_to_dht():
 		read_sockets, _, exception_sockets = select.select(node.get_sockets()+[client_socket], [], node.get_sockets()+[client_socket])
 		# iterate over notified sockets
 		for notified_socket in read_sockets:
+			# print(notified_socket)
+			# print(node.get_successor())
+			# print(node.get_predecessor())
+			# print(node.get_sockets())
 			node.set_counter()
 			# first check for bootstrap
 			if notified_socket == client_socket:
@@ -65,7 +69,6 @@ def connect_to_dht():
 				# wait until info about predecessor and successor arrives
 				# answer = special_receive(client_socket)
 				answer = receive(client_socket)
-
 				if answer == False:
 					continue
 
@@ -81,11 +84,9 @@ def connect_to_dht():
 				predecessor_socket, _ = node.get_sockets()[0].accept()
 				# wait until info about predecessor and successor arrives
 
-				answer = receive(client_socket)
+				answer = receive(predecessor_socket,port)
 				if answer == False:
-					print("2")
 					continue
-
 				[_, [pred, succ, [answer_k, answer_consistency]]] = answer
 				# set consistency and k
 				node.set_consistency(answer_consistency)
@@ -124,19 +125,26 @@ def special_receive(socket):
 				sys.exit()
 
 # function for receiving a message from a socket
-def receive(socket):
+def receive(socket, wow = None):
 	while True:
 		try:
-			print(socket)
+			# print(socket)
 			full_msg = b''
 			new_msg = True
 			while True:
 				if new_msg == True:
+					# if wow == 9912:
+					# 	print("MY MASSIVE COCK1")
+					# 	print("Here,",socket.recv(HEADERSIZE))
 					msg = socket.recv(HEADERSIZE)
 				else:
+					# if wow == 9912:
+					# 	print("MY MASSIVE COCK2")
+					# 	print(socket.recv(1))
 					msg = socket.recv(1)
 				# print(msg)
 				if msg == b'':
+					print("Receive closing socket",socket)
 					if node.get_successor()[0] != node.get_predecessor()[0]:
 						socket.close()
 						node.remove_socket(socket)
@@ -204,7 +212,9 @@ def get_data():
 
 def main_loop():
 
-	file = open("insert_1.txt")
+	filename = "insert_" + str(int(port % 9910 / 2)) + ".txt"
+	print(filename)
+	file = open(filename)
 	insert_lines = file.readlines()
 	for i in range(len(insert_lines)):
 		insert_lines[i] = insert_lines[i].strip()
@@ -232,7 +242,7 @@ def main_loop():
 	# request_lines.reverse()
 	# file.close()
 
-	insert_time_start = time.mktime(time.struct_time((2021,3,26,12,16,00,4,85,0)))
+	insert_time_start = time.mktime(time.struct_time((2021,3,26,18,28,00,4,85,0)))
 	# query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
 	# request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
 	sleep(2)
@@ -408,6 +418,8 @@ The basic functionalities of the ToyChord CLI include the following:
 
 
 		# # check all sockkets to be closed if other closed them close them aswell
+
+		# insert_lines = []
 		if time.time() >= insert_time_start:
 			# start inserting
 			if insert_lines:
@@ -447,6 +459,7 @@ if __name__ == '__main__':
 	for i, arg in enumerate(sys.argv):
 		if i == 1:
 			port = int(arg)
+	node = Node(ip, port, False)
 	create_server_socket()
 	connect_to_dht()
 	sleep(1)
