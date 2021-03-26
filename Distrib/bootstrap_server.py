@@ -66,7 +66,6 @@ def main_loop(node):
 	    insert_lines[i] = insert_lines[i].split(",")
 	insert_lines.reverse()
 	file.close()
-	print(len(insert_lines))
 	# file = open("query_0.txt")
 	# query_lines = file.readlines()
 	# for i in range(len(query_lines) - 1):
@@ -89,7 +88,7 @@ def main_loop(node):
 	# request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
 
 	while True:
-		sleep(2)
+		# sleep(2)
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
 
@@ -122,13 +121,11 @@ def main_loop(node):
 						node.add_socket(peer_socket)
 						if node.get_successor() != node.get_predecessor():
 							node.remove_socket(node.get_predecessor()[2])
-						print("new socket, ",peer_socket)
 					node.update_dht(peer_ip_address, peer_port, peer_id, code, peer_socket)
 			elif notified_socket not in node.get_sockets():
 				continue
 			else:
 				[[peer_id, count, code], info] = receive(notified_socket)
-				print(code, info)
 				# check for new successor
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
@@ -163,7 +160,6 @@ def main_loop(node):
 				# update data on join code
 				elif code == 10:
 					[new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID] = info
-					print(info)
 					node.update_data_on_join(new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID)
 				# overlay code:
 				elif code == 11:

@@ -548,7 +548,7 @@ class Node():
 			msg = [[self.get_id(), self.get_counter(), 1], [self.get_ip_address(), self.get_port()]]
 			msg = pickle.dumps(msg, -1)
 			self.get_successor()[2].send(msg)
-		print(f"Server {self.get_id()} with address {self.get_ip_address()} and port {self.get_port()} just joined")
+		print("Server {0} with address {1} and port {2} just joined".format(self.get_id(), self.get_ip_address(), self.get_port()))
 
 	def depart(self):
 		# Send the data that this node has to the successor:
@@ -594,7 +594,7 @@ class Node():
 			return
 
 		self.get_predecessor()[2].send(msg)
-		print(f"Sending Goodbye message to {self.get_predecessor()[2]}")
+		print("Sending Goodbye message to {0}".format(self.get_predecessor()[2]))
 		sleep(.1)
 		self.get_predecessor()[2].shutdown(socket.SHUT_RDWR)
 		self.get_predecessor()[2].close()
@@ -875,7 +875,7 @@ class Node():
 		return
 
 	def create_socket(self, ip_address, port):
-		print(f"creating socket for address {ip_address} and port {port}")
+		print("creating socket for address {0} and port {1}".format(ip_address, port))
 		client_socket = server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 

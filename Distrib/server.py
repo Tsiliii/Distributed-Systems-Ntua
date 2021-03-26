@@ -155,7 +155,7 @@ def main_loop():
 	# request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
 
 	while True:
-		sleep(2)
+		# sleep(2)
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
 
@@ -186,7 +186,6 @@ def main_loop():
 				continue
 			else:
 				[[peer_id, count, code], info] = receive(notified_socket)
-				print(code, info)
 				# check for new successor
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
@@ -217,7 +216,6 @@ def main_loop():
 					node.update_data_on_depart(sent_data, send_key, departing_node_id)
 				elif code == 10:
 					[new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID] = info
-					print(info)
 					node.update_data_on_join(new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID)
 				# overlay code:
 				elif code == 11:
