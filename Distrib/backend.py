@@ -910,7 +910,7 @@ class Node():
 		return
 
 	def create_socket(self, ip_address, port):
-		print(f"creating socket for address {ip_address} and port {port}")
+		print("creating socket for address {0} and port {1}".format(ip_address, port))
 		client_socket = server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 

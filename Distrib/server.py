@@ -305,7 +305,6 @@ def main_loop():
 					node.update_data_on_depart(sent_data, send_key, departing_node_id)
 				elif code == 10:
 					[new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID] = info
-					print(info)
 					node.update_data_on_join(new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID)
 				# overlay code:
 				elif code == 11:
@@ -404,7 +403,7 @@ The basic functionalities of the ToyChord CLI include the following:
 	help
 """)
 			else:
-				print(f"You entered: {value}, did you make a mistake?")
+				print("You entered: ",value,", did you make a mistake?")
 			print()
 
 

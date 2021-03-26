@@ -104,7 +104,6 @@ def main_loop(node):
 	    insert_lines[i] = insert_lines[i].split(",")
 	insert_lines.reverse()
 	file.close()
-	print(len(insert_lines))
 	# file = open("query_0.txt")
 	# query_lines = file.readlines()
 	# for i in range(len(query_lines) - 1):
@@ -163,7 +162,6 @@ def main_loop(node):
 						node.add_socket(peer_socket)
 						if node.get_successor() != node.get_predecessor():
 							node.remove_socket(node.get_predecessor()[2])
-						print("new socket, ",peer_socket)
 					node.update_dht(peer_ip_address, peer_port, peer_id, code, peer_socket)
 			elif notified_socket not in node.get_sockets():
 				continue
@@ -207,7 +205,6 @@ def main_loop(node):
 				# update data on join code
 				elif code == 10:
 					[new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID] = info
-					print(info)
 					node.update_data_on_join(new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID)
 				# overlay code:
 				elif code == 11:
@@ -359,7 +356,7 @@ The basic functionalities of the ToyChord CLI include the following:
 	help
 """)
 			else:
-				print(f"You entered: {value}, did you make a mistake?")
+				print("You entered:",value,", did you make a mistake?")
 			print()
 
 
