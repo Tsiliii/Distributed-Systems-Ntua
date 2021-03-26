@@ -3,6 +3,7 @@ import select
 import sys
 import pickle
 import errno
+import time
 from time import sleep
 from backend import Node
 
@@ -57,20 +58,51 @@ def receive(socket):
 		# 	sys.exit()
 
 def main_loop(node):
+
+	# file = open("insert_0.txt")
+	# insert_lines = file.readlines()
+	# for i in range(len(insert_lines) - 1):
+	# 	insert_lines[i] = insert_lines[i][:-2]
+	# insert_dict = {}
+	# for line in insert_lines:
+	#     items = line.split(",")
+	#     insert_dict[items[0]] = items[1]
+	# file.close()
+	#
+	#
+	# file = open("query_0.txt")
+	# query_lines = file.readlines()
+	# for i in range(len(query_lines) - 1):
+	#     query_lines[i] = query_lines[i][:-2]
+	# query_dict = {}
+	# for line in query_lines:
+	#     items = line.split(",")
+	#     query_dict[items[0]] = items[1]
+	# file.close()
+	#
+	# file = open("requests_0.txt")
+	# request_lines = file.readlines()
+	# for i in range(len(request_lines) - 1):
+	#     request_lines[i] = request_lines[i][:-2]
+	# request_dict = {}
+	# for line in request_lines:
+	#     items = line.split(",")
+	#     request_dict[items[0]] = items[1]
+	# file.close()
+
+	# insert_time_start = time.mktime(time.struct_time((2021,3,26,4,45,00,4,85,0)))
+    # query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
+    # request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
+
 	while True:
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
 
 		# iterate over notified sockets
 		for notified_socket in read_sockets:
-			# print("NOTIFIED",notified_socket)
-			# print("PRED",node.get_predecessor())
-			# print("SUCC",node.get_successor())
-			# print("SOCKS",node.get_sockets())
 			node.set_counter()
 			# if notified socket is a server socket - new connection, accept it
 			if notified_socket == node.get_sockets()[0]:
-				# print("GOT IN",notified_socket, node.get_sockets()[0],node.get_sockets())
 				# the returned value is a pair (conn, address) where conn is a new socket object usable to send and
 				# receive data on the connection, and address is the address bound to the socket on the other end of the connection.
 				peer_socket, _ = notified_socket.accept()
@@ -78,9 +110,13 @@ def main_loop(node):
 				# receive port number
 				[[peer_id, _, code], info] = receive(peer_socket)
 
-				if code == 3:
-					# print("INFO",info)
-					# print("SOCKS2",node.get_sockets())
+				if code == 12:
+					[peer_ip, peer_port, message] = info
+					print("I got a message of ACK from ip",peer_ip,",port",peer_port,": counter =", message)
+					node.set_end()
+					if peer_socket not in node.get_sockets():
+						peer_socket.close()
+				elif code == 3:
 					[_, succ] = info
 					node.update_dht(succ[0], succ[1], succ[2], code, peer_socket)
 				else:
@@ -92,16 +128,11 @@ def main_loop(node):
 						if node.get_successor() != node.get_predecessor():
 							node.remove_socket(node.get_predecessor()[2])
 						print("new socket, ",peer_socket)
-					# print("COMPARE",peer_socket, node.get_sockets()[0])
 					node.update_dht(peer_ip_address, peer_port, peer_id, code, peer_socket)
-					# print(node.get_sockets())
-				print()
 			elif notified_socket not in node.get_sockets():
 				continue
 			else:
-				# print(receive(notified_socket))
 				[[peer_id, count, code], info] = receive(notified_socket)
-				# print(code, info)
 				# check for new successor
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
@@ -111,28 +142,29 @@ def main_loop(node):
 					node.update_dht(pred_ip, pred_port, peer_id, code = 1, peer_socket = notified_socket)
 				#insert code
 				elif code == 4:
-					[key,value] = info
-					node.insert(key,value)
+					[key,value, peer_ip_address, peer_port, counter] = info
+					node.insert(key,value,peer_ip_address, peer_port, counter)
 				#delete code
 				elif code == 5:
 					[key] = info
 					node.delete(key)
 				#insert replica code
 				elif code == 6:
-					[key, value, peer_ip, peer_port, peer_id, currentk] = info
-					node.replica_insert(key, value, peer_ip, peer_port, peer_id, currentk)
+					[key, value, peer_ip, peer_port, peer_id, currentk, peer_ip_address, old_peer_port, counter] = info
+					node.replica_insert(key, value, peer_ip, peer_port, peer_id, currentk, peer_ip_address, old_peer_port, counter)
 				#delete replica code
 				elif code == 7:
 					[key, peer_ip, peer_port, peer_id, currentk] = info
 					node.replica_delete(key, peer_ip, peer_port, peer_id, currentk)
 				#query code
 				elif code == 8:
-					[key, starting_node_ID, round_trip, found_number] = info
-					node.query(key, starting_node_ID, round_trip, found_number)
-				#update data on predecessor departing:
+					[key, starting_node_ID ,peer_ip_address, peer_port, counter, round_trip, found_number] = info
+					node.query(key, starting_node_ID ,peer_ip_address, peer_port, counter, round_trip, found_number)
+				#update data on depart code
 				elif code == 9:
 					[sent_data, send_key, departing_node_id] = info
 					node.update_data_on_depart(sent_data, send_key, departing_node_id)
+				# update data on join code
 				elif code == 10:
 					[new_node_ID, data_to_be_updated, counters_to_be_updated, message_sender_ID] = info
 					print(info)
@@ -142,8 +174,20 @@ def main_loop(node):
 					[list_of_nodes] = info
 					# print(list_of_nodes)
 					node.overlay(list_of_nodes)
-				print()
+				# ACK code
+				elif code == 12:
+					[peer_ip, peer_port, message] = info
+					print("I got a message of ACK from ip",peer_ip,",port",peer_port,": counter =", message)
+					node.set_end()
+			print()
 
+
+		#Expirements
+		# if time == smth:
+		# 	node.set_start()
+		# pops
+		# if its last item so something interesting
+		# i.e. track its counter.
 
 		# check for input, set time interval to 0 for non-blocking
 		input = select.select([sys.stdin], [], [], 0)[0]
@@ -158,18 +202,24 @@ def main_loop(node):
 				if (len(temporary) > 2):
 					key = temporary[1].strip()
 					some_value = temporary[2].strip()
-					node.insert(key,some_value)
+					node.insert(key,some_value,node.get_ip_address(),node.get_port(),node.get_counter())
+				else:
+					print("Wrong Input")
 			elif str(value).lower().startswith("delete"):
 				temporary = str(value).split(',')
 				if (len(temporary) > 1):
 					key = temporary[1].strip()
 					node.delete(key)
+				else:
+					print("Wrong Input")
 			elif str(value).lower().startswith("query"):
 				temporary = str(value).split(',')
 				if (len(temporary) > 1):
 					starting_node_ID = node.get_id()
 					key = temporary[1].strip()
-					node.query(key, starting_node_ID)
+					node.query(key, starting_node_ID,node.get_ip_address(),node.get_port(),node.get_counter())
+				else:
+					print("Wrong Input")
 			elif str(value).lower().startswith("debug"):
 				print(node.get_predecessor())
 				print(node.get_successor())

@@ -1,6 +1,7 @@
 import socket
 import pickle
 from hashlib import sha1
+import time
 from time import sleep
 
 class Node():
@@ -18,6 +19,9 @@ class Node():
 		self.k = 1
 		self.consistency = 'lazy' #or 'linearizability'
 		self.replica_counter = {}
+		self.start_time = None
+		self.end_time = None
+
 
 	def get_id(self, first4 = True):
 		# if first4:
@@ -91,16 +95,45 @@ class Node():
 		self.counter += 1
 		return self.counter
 
-	def insert(self, key, value):
+	def return_the_favor(self, caller_ip, caller_port, message):
+		print("I tried", caller_ip, caller_port, message, self.get_ip_address(), self.get_port())
+		# create link or use existing
+		if (caller_ip, caller_port) == (self.get_ip_address(), self.get_port()):
+			print("I got a message of ACK from myself, counter =", message)
+			self.set_end()
+		elif (caller_ip, caller_port) == (self.get_predecessor()[0], self.get_predecessor()[1]):
+			msg = [[self.get_id(), self.get_counter(), 12], [self.get_ip_address(), self.get_port(), message]]
+			msg = pickle.dumps(msg, -1)
+			self.get_predecessor()[2].send(msg)
+		elif (caller_ip, caller_port) == (self.get_successor()[0], self.get_successor()[1]):
+			msg = [[self.get_id(), self.get_counter(), 12], [self.get_ip_address(), self.get_port(), message]]
+			msg = pickle.dumps(msg, -1)
+			self.get_successor()[2].send(msg)
+		else:
+			new_socket = self.create_socket(caller_ip, caller_port)
+			msg = [[self.get_id(), self.get_counter(), 12], [self.get_ip_address(), self.get_port(), message]]
+			msg = pickle.dumps(msg, -1)
+			new_socket.send(msg)
+		return
+
+	def set_start(self):
+		self.start_time = time.time()
+
+	def set_end(self):
+		self.end_time = time.time()
+
+	def insert(self, key, value, peer_ip_address, peer_port, counter):
 		#one node case
 		if self.get_predecessor() == None:
 			if self.check_if_in_data(key):
 				print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
 				self.update_data(key,value)
+				self.return_the_favor(peer_ip_address, peer_port, str(counter) + "Update")
 				return
 			else:
 				print("I,",self.get_id(),"just inserted data",key,"with hash id",self.hash(key))
 				self.insert_data(key,value,self.get_k())
+				self.return_the_favor(peer_ip_address, peer_port, str(counter) + "Insert")
 				return
 
 		pred = self.get_predecessor()[0]
@@ -111,35 +144,39 @@ class Node():
 				print("I,",self.get_id(),"just updated key:",key,"with new value:",value,'and old value:',self.get_data(key))
 				self.update_data(key,value)
 				if self.get_k() != 1:
-					msg = [[self.get_id(), self.get_counter(), 6],[key, value, self.get_ip_address(), self.get_port(), self.get_id(), self.get_k() - 1]]
+					msg = [[self.get_id(), self.get_counter(), 6],[key, value, self.get_ip_address(), self.get_port(), self.get_id(), self.get_k() - 1, peer_ip_address, peer_port, counter]]
 					msg = pickle.dumps(msg, -1)
 					self.get_successor()[2].send(msg)
+					return
+				self.return_the_favor(peer_ip_address, peer_port, str(counter) + " Insert")
 				return
 			else:
 				print("I,",self.get_id(),"just inserted data",key,"with hash id",self.hash(key))
 				self.insert_data(key,value,self.get_k())
 				if self.get_k() != 1:
-					msg = [[self.get_id(), self.get_counter(), 6],[key, value, self.get_ip_address(), self.get_port(), self.get_id(), self.get_k() - 1]]
+					msg = [[self.get_id(), self.get_counter(), 6],[key, value, self.get_ip_address(), self.get_port(), self.get_id(), self.get_k() - 1, peer_ip_address, peer_port, counter]]
 					msg = pickle.dumps(msg, -1)
 					self.get_successor()[2].send(msg)
+					return
+				self.return_the_favor(peer_ip_address, peer_port, str(counter) + " Insert")
 				return
 		else:
 			# already have a replica so go backwards
 			if self.check_if_in_data(key):
 				print("Found insert for",self.hash(key),", passing it backwards")
-				msg = [[self.get_id(), self.get_counter(), 4],[key,value]]
+				msg = [[self.get_id(), self.get_counter(), 4],[key,value, peer_ip_address, peer_port, counter]]
 				msg = pickle.dumps(msg, -1)
 				self.get_predecessor()[2].send(msg)
 				return
 			# go forwards
 			else:
 				print("Found insert for",self.hash(key),", passing it forward")
-				msg = [[self.get_id(), self.get_counter(), 4],[key,value]]
+				msg = [[self.get_id(), self.get_counter(), 4],[key,value, peer_ip_address, peer_port, counter]]
 				msg = pickle.dumps(msg, -1)
 				self.get_successor()[2].send(msg)
 				return
 
-	def replica_insert(self,key,value,peer_ip,peer_port,peer_id,currentk):
+	def replica_insert(self, key, value, peer_ip, peer_port, peer_id, currentk, peer_ip_address, old_peer_port, counter):
 		if currentk != 0 and self.get_id() != peer_id:
 			if self.check_if_in_data(key):
 				print("I,",self.get_id(),"just updated replica",currentk ,"for key:",key,"with new value:",value,'and old value:',self.get_data(key))
@@ -148,14 +185,16 @@ class Node():
 				print("I,",self.get_id(),"just inserted replica",currentk ,"for key:", key, "with hash id", self.hash(key))
 				self.insert_data(key,value,currentk)
 			if currentk != 1:
-				msg = [[self.get_id(), self.get_counter(), 6],[key, value, peer_ip, peer_port, peer_id, currentk - 1]]
+				msg = [[self.get_id(), self.get_counter(), 6],[key, value, peer_ip, peer_port, peer_id, currentk - 1, peer_ip_address, old_peer_port, counter]]
 				msg = pickle.dumps(msg, -1)
 				self.get_successor()[2].send(msg)
+			self.return_the_favor(peer_ip_address, old_peer_port, str(counter) + " Insert")
 		elif self.get_id() == peer_id and currentk != 0:
 			print("Finished the whole circle, network cardinality is smaller than k =",self.get_k())
+			self.return_the_favor(peer_ip_address, old_peer_port, str(counter) + " Insert - Small circle")
 		return
 
-	def query(self, key, starting_node_ID, made_a_round_trip=False,found_number = -1):
+	def query(self, key, starting_node_ID ,peer_ip_address, peer_port, counter, made_a_round_trip=False,found_number = -1):
 		if found_number == -1:
 			found_number = self.get_k() + 1
 		if key == "*":
@@ -167,13 +206,14 @@ class Node():
 			else:
 				print("Found request for query *, this node has no data")
 			if self.get_predecessor() == None:
+				self.return_the_favor(peer_ip_address, peer_port, str(counter) + " Query")
 				return
 			succ = self.get_successor()
 			[ID, address, socket] = succ
-			# if ID == starting_node_ID
-			if int(str(ID)[:4]) == starting_node_ID:
+			if ID == starting_node_ID:
+				self.return_the_favor(peer_ip_address, peer_port, str(counter) + " Query")
 				return
-			msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, False, -1]]
+			msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID ,peer_ip_address, peer_port, counter, False, -1]]
 			msg = pickle.dumps(msg, -1)
 			succ[2].send(msg)
 			return
@@ -181,23 +221,24 @@ class Node():
 			if self.consistency == "lazy":
 				if self.check_if_in_data(key): #That means that the node is in the replication chain
 					print(key + " => " + self.get_data(key), self.get_data_replica_counter(key))
+					self.return_the_favor(peer_ip_address, peer_port, str(counter) + " Query")
 					return
 				else: #That means the node is outside the replication chain, we must find the first node that has it
 					if self.get_predecessor() == None:
 						print("The key wasn't found!")
+						self.return_the_favor(peer_ip_address, peer_port, str(counter) + " Query Error")
 						return
 					succ = self.get_successor()
 					[ID, address, socket] = succ
 					if self.get_id() == starting_node_ID:
 						if made_a_round_trip:
 							print("The key wasn't found!")
+							self.return_the_favor(peer_ip_address, peer_port, str(counter) + " Query Error")
 							return
 						else:
 							made_a_round_trip = True
 					print("The key wasn't found on this node, passing the query forward")
-					if self.get_predecessor() == None:
-						return
-					msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, made_a_round_trip, -1]]
+					msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID ,peer_ip_address, peer_port, counter, made_a_round_trip, -1]]
 					msg = pickle.dumps(msg, -1)
 					succ[2].send(msg)
 					return
@@ -205,16 +246,18 @@ class Node():
 				if not self.check_if_in_data(key):
 					if self.get_predecessor() == None:
 						print("The key wasn't found!")
+						self.return_the_favor(peer_ip_address, peer_port, str(counter) + " Query Error")
 						return
 					succ = self.get_successor()
 					if self.get_id() == starting_node_ID:
 						if made_a_round_trip:
 							print("The key wasn't found!")
+							self.return_the_favor(peer_ip_address, peer_port, str(counter) + " Query Error")
 							return
 						else:
 							made_a_round_trip = True
 					print("The key wasn't found on this node, passing the query forward")
-					msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, made_a_round_trip, found_number]]
+					msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID ,peer_ip_address, peer_port, counter, made_a_round_trip, found_number]]
 					msg = pickle.dumps(msg, -1)
 					succ[2].send(msg)
 					return
@@ -222,27 +265,30 @@ class Node():
 					if self.get_data_replica_counter(key) != 1:
 						if self.get_predecessor() == None:
 							print("The key wasn't found!")
+							self.return_the_favor(peer_ip_address, peer_port, str(counter) + " Query Error")
 							return
 						if found_number < self.get_data_replica_counter(key):
 							print("The cycle is smaller than k, we have to go back")
 							pred = self.get_predecessor()
-							msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, made_a_round_trip ,found_number]]
+							msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID ,peer_ip_address, peer_port, counter, made_a_round_trip ,found_number]]
 							msg = pickle.dumps(msg, -1)
 							pred[2].send(msg)
 							return
 						elif found_number == self.get_data_replica_counter(key):
 							print("Came back look what I found")
 							print(key + " => " + self.get_data(key), self.get_data_replica_counter(key))
+							self.return_the_favor(peer_ip_address, peer_port, str(counter) + " Query")
 							return
 						else:
 							succ = self.get_successor()
 							print("The key was found on this node, but it's not the latest node, passing the query forward")
-							msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, made_a_round_trip, self.get_data_replica_counter(key)]]
+							msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID ,peer_ip_address, peer_port, counter, made_a_round_trip, self.get_data_replica_counter(key)]]
 							msg = pickle.dumps(msg, -1)
 							succ[2].send(msg)
 							return
 					else:
 						print(key + " => " + self.get_data(key), self.get_data_replica_counter(key))
+						self.return_the_favor(peer_ip_address, peer_port, str(counter) + " Query")
 						return
 
 	def delete(self, key):
