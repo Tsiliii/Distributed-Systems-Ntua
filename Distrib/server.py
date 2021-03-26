@@ -93,9 +93,9 @@ def receive(socket):
 			return msg
 		except IOError as e:
 			# This is normal on non blocking connections - when there are no incoming data error is going to be raised
-	        # Some operating systems will indicate that using AGAIN, and some using WOULDBLOCK error code
-	        # We are going to check for both - if one of them - that's expected, means no incoming data, continue as normal
-	        # If we got different error code - something happened
+			# Some operating systems will indicate that using AGAIN, and some using WOULDBLOCK error code
+			# We are going to check for both - if one of them - that's expected, means no incoming data, continue as normal
+			# If we got different error code - something happened
 			if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
 				print('Reading error: {}'.format(str(e)))
 				sys.exit()
@@ -122,40 +122,37 @@ def get_data():
 
 def main_loop():
 
-	# file = open("insert_0.txt")
-	# insert_lines = file.readlines()
-	# for i in range(len(insert_lines) - 1):
-	# 	insert_lines[i] = insert_lines[i][:-2]
-	# insert_dict = {}
-	# for line in insert_lines:
-	#     items = line.split(",")
-	#     insert_dict[items[0]] = items[1]
-	# file.close()
-	#
-	#
-	# file = open("query_0.txt")
-	# query_lines = file.readlines()
-	# for i in range(len(query_lines) - 1):
-	#     query_lines[i] = query_lines[i][:-2]
-	# query_dict = {}
-	# for line in query_lines:
-	#     items = line.split(",")
-	#     query_dict[items[0]] = items[1]
-	# file.close()
-	#
-	# file = open("requests_0.txt")
-	# request_lines = file.readlines()
-	# for i in range(len(request_lines) - 1):
-	#     request_lines[i] = request_lines[i][:-2]
-	# request_dict = {}
-	# for line in request_lines:
-	#     items = line.split(",")
-	#     request_dict[items[0]] = items[1]
-	# file.close()
+	file = open("insert_0.txt")
+	insert_lines = file.readlines()
+	for i in range(len(insert_lines) - 1):
+		insert_lines[i] = insert_lines[i][:-2]
 
-	# insert_time_start = time.mktime(time.struct_time((2021,3,26,4,45,00,4,85,0)))
-    # query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
-    # request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
+	for i in range(len(insert_lines)):
+	    insert_lines[i] = insert_lines[i].split(",")
+	insert_lines.reverse()
+	file.close()
+	
+	
+	file = open("query_0.txt")
+	query_lines = file.readlines()
+	for i in range(len(query_lines) - 1):
+		query_lines[i] = query_lines[i][:-2]
+	query_lines.reverse()
+	file.close()
+	
+	file = open("requests_0.txt")
+	request_lines = file.readlines()
+	for i in range(len(request_lines) - 1):
+		request_lines[i] = request_lines[i][:-2]
+
+	for i in range(len(request_lines)):
+	    request_lines[i] = request_lines[i].split(",")
+	request_lines.reverse()
+	file.close()
+
+	insert_time_start = time.mktime(time.struct_time((2021,3,26,4,45,00,4,85,0)))
+	query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
+	request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
 
 	while True:
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
@@ -289,52 +286,77 @@ Welcome to ToyChord's 1.0 help!
 The basic functionalities of the ToyChord CLI include the following:
 
 • \033[4minsert, <key> , <value>\033[0m:
-    This function when called, inserts a (key, value) pair, where key is the
-    name of the song, and value a string (that supposedly returns the node
-    that we must connect to, in order to download said song). Example usage:
+	This function when called, inserts a (key, value) pair, where key is the
+	name of the song, and value a string (that supposedly returns the node
+	that we must connect to, in order to download said song). Example usage:
 
 	insert, Like a Rolling Stone, 1
 
 • \033[4mdelete, <key>\033[0m:
-    This function when called, deletes a the data related to key, where key
-    is the name of the song. Example usage:
+	This function when called, deletes a the data related to key, where key
+	is the name of the song. Example usage:
 
 	delete, Like a Rolling Stone
 
 • \033[4mquery, <key>\033[0m:
-    This function when called, looks up a key in the DHT, and if it exists,
-    it returns the corresponding value, from the node that is responsible for
-    this key. You can query the special character "*", and have every
-    <key,value> pairs of every node returned. Example usages:
+	This function when called, looks up a key in the DHT, and if it exists,
+	it returns the corresponding value, from the node that is responsible for
+	this key. You can query the special character "*", and have every
+	<key,value> pairs of every node returned. Example usages:
 
 	query, Like a Rolling Stone
 	query, *
 
 • \033[4mdepart\033[0m:
-    This function gracefully removes a node from the DHT, allowing the Chord
-    to tidily shut down its connections with the other nodesand then remove
-    it from the system.
+	This function gracefully removes a node from the DHT, allowing the Chord
+	to tidily shut down its connections with the other nodesand then remove
+	it from the system.
 
 	depart
 
 • \033[4moverlay\033[0m:
-    This function prints out the nodes that exist in the DHT (each node is
-    represented by its ID), in a manner that shows the order by which the nodes
-    are connected. Example usage:
+	This function prints out the nodes that exist in the DHT (each node is
+	represented by its ID), in a manner that shows the order by which the nodes
+	are connected. Example usage:
 
 	overlay
 
 • \033[4mhelp\033[0m:
-    This function prints out this message, assisting you with efficiently using
-    this CLI. Example usage:
+	This function prints out this message, assisting you with efficiently using
+	this CLI. Example usage:
 
 	help
 """)
 			else:
 				print(f"You entered: {value}, did you make a mistake?")
 			print()
-		# check all sockkets to be closed if other closed them close them aswell
 
+
+		# # check all sockkets to be closed if other closed them close them aswell
+		if time.time() >= insert_time_start:
+			# start inserting
+			key,value = insert_lines.pop()
+			node.insert(key,value,node.get_ip_address(),node.get_port(),node.get_counter())
+
+		if time.time() >= query_time_start:
+			# start quering
+			key = query_lines.pop()
+			starting_node_ID = node.get_id()
+			node.query(key, starting_node_ID,node.get_ip_address(),node.get_port(),node.get_counter())
+		
+		if time.time() >= request_time_start:
+			# start requesting
+			request = request_lines.pop()
+			# if 2 terms then it's a query
+			if len(request) == 2:
+				_, key = request
+				starting_node_ID = node.get_id()
+				node.query(key, starting_node_ID,node.get_ip_address(),node.get_port(),node.get_counter())
+			# if 3 terms then it's an insert:
+			elif len(request) == 3:
+				_, key, value = request
+				key,value = insert_lines.pop()
+				node.insert(key,value,node.get_ip_address(),node.get_port(),node.get_counter())
 
 if __name__ == '__main__':
 	for i, arg in enumerate(sys.argv):

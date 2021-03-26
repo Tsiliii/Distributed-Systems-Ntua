@@ -1,0 +1,50 @@
+S1: D1zZweELA8
+Connect: ssh user@snf-18352.ok-kno.grnetcloud.net
+Public IP: 83.212.72.236
+Private Net: 192.168.0.1
+S2: WJ52SU0lvL
+Connect: ssh user@snf-18353.ok-kno.grnetcloud.net
+Private Net: 192.168.0.2
+S3: sLImOF1eKN
+Connect: ssh user@snf-18354.ok-kno.grnetcloud.net
+Private Net: 192.168.0.3
+S4: H6vRzznD84
+Connect: ssh user@snf-18355.ok-kno.grnetcloud.net
+Private Net: 192.168.0.4
+S5: ViyuGJyS9b
+Connect: ssh user@snf-18356.ok-kno.grnetcloud.net
+Private Net: 192.168.0.5
+
+info:
+Render Templates, HTML, Requsets:
+https://www.digitalocean.com/community/tutorials/how-to-make-a-web-application-using-flask-in-python-3#step-2-%E2%80%94-creating-a-base-application
+https://www.freecodecamp.org/news/how-to-build-a-web-application-using-flask-and-deploy-it-to-the-cloud-3551c985e492/
+
+Socket_io:
+https://stackoverflow.com/questions/45918818/how-to-send-message-from-server-to-client-using-flask-socket-io
+
+Chord:
+https://github.com/ShaeBrown/chord-flask
+https://github.com/foldingpaper/dht-flask
+
+Chord - No Flask:
+https://medium.com/techlog/chord-building-a-dht-distributed-hash-table-in-golang-67c3ce17417b
+
+Sockets:
+https://www.youtube.com/watch?v=T0rYSFPAR0A
+https://www.youtube.com/watch?v=CV7_stUWvBQ
+https://www.youtube.com/watch?v=ytu2yV3Gn1I
+ -> https://pythonprogramming.net/sockets-tutorial-python-3/
+ -> https://pythonprogramming.net/buffering-streaming-data-sockets-tutorial-python-3/
+ -> https://pythonprogramming.net/pickle-objects-sockets-tutorial-python-3/
+ -> https://pythonprogramming.net/server-chatroom-sockets-tutorial-python-3/
+ -> https://pythonprogramming.net/client-chatroom-sockets-tutorial-python-3/
+
+Sockets - Non Blocking:
+https://medium.com/vaidikkapoor/understanding-non-blocking-i-o-with-python-part-1-ec31a2e2db9b
+
+Solve Input Problem:
+https://stackoverflow.com/questions/14766398/python-select-with-sockets-and-sys-stdin
+https://stackoverflow.com/questions/34126256/non-blocking-keyboard-input-python
+https://linustechtips.com/topic/585993-python-keyboard-input-without-block/
+https://techdevops.wordpress.com/2015/03/24/non-blocking-io-keyboard-listener-in-python/
