@@ -311,7 +311,7 @@ The basic functionalities of the ToyChord CLI include the following:
 	help
 """)
 			else:
-				print(f"You entered: {value}, did you make a mistake?")
+				print("You entered:",value,", did you make a mistake?")
 			print()
 
 
