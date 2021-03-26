@@ -63,10 +63,10 @@ def main_loop(node):
 
 		# iterate over notified sockets
 		for notified_socket in read_sockets:
-			print("NOTIFIED",notified_socket)
-			print("PRED",node.get_predecessor())
-			print("SUCC",node.get_successor())
-			print("SOCKS",node.get_sockets())
+			# print("NOTIFIED",notified_socket)
+			# print("PRED",node.get_predecessor())
+			# print("SUCC",node.get_successor())
+			# print("SOCKS",node.get_sockets())
 			node.set_counter()
 			# if notified socket is a server socket - new connection, accept it
 			if notified_socket == node.get_sockets()[0]:
@@ -79,8 +79,8 @@ def main_loop(node):
 				[[peer_id, _, code], info] = receive(peer_socket)
 
 				if code == 3:
-					print("INFO",info)
-					print("SOCKS2",node.get_sockets())
+					# print("INFO",info)
+					# print("SOCKS2",node.get_sockets())
 					[_, succ] = info
 					node.update_dht(succ[0], succ[1], succ[2], code, peer_socket)
 				else:
@@ -101,7 +101,7 @@ def main_loop(node):
 			else:
 				# print(receive(notified_socket))
 				[[peer_id, count, code], info] = receive(notified_socket)
-				print(code, info)
+				# print(code, info)
 				# check for new successor
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
@@ -127,8 +127,8 @@ def main_loop(node):
 					node.replica_delete(key, peer_ip, peer_port, peer_id, currentk)
 				#query code
 				elif code == 8:
-					[key, starting_node_ID, round_trip] = info
-					node.query(key, starting_node_ID, made_a_round_trip = round_trip)
+					[key, starting_node_ID, round_trip, found_number] = info
+					node.query(key, starting_node_ID, round_trip, found_number)
 				#update data on predecessor departing:
 				elif code == 9:
 					[sent_data, send_key, departing_node_id] = info

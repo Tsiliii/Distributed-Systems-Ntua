@@ -121,15 +121,23 @@ class Node():
 				if self.get_k() != 1:
 					msg = [[self.get_id(), self.get_counter(), 6],[key, value, self.get_ip_address(), self.get_port(), self.get_id(), self.get_k() - 1]]
 					msg = pickle.dumps(msg, -1)
-					# print(self.get_successor())
 					self.get_successor()[2].send(msg)
 				return
 		else:
-			print("Found insert for",self.hash(key),", passing it forward")
-			msg = [[self.get_id(), self.get_counter(), 4],[key,value]]
-			msg = pickle.dumps(msg, -1)
-			self.get_successor()[2].send(msg)
-			return
+			# already have a replica so go backwards
+			if self.check_if_in_data(key):
+				print("Found insert for",self.hash(key),", passing it backwards")
+				msg = [[self.get_id(), self.get_counter(), 4],[key,value]]
+				msg = pickle.dumps(msg, -1)
+				self.get_predecessor()[2].send(msg)
+				return
+			# go forwards
+			else:
+				print("Found insert for",self.hash(key),", passing it forward")
+				msg = [[self.get_id(), self.get_counter(), 4],[key,value]]
+				msg = pickle.dumps(msg, -1)
+				self.get_successor()[2].send(msg)
+				return
 
 	def replica_insert(self,key,value,peer_ip,peer_port,peer_id,currentk):
 		if currentk != 0 and self.get_id() != peer_id:
@@ -147,7 +155,9 @@ class Node():
 			print("Finished the whole circle, network cardinality is smaller than k =",self.get_k())
 		return
 
-	def query(self, key, starting_node_ID, made_a_round_trip=False):
+	def query(self, key, starting_node_ID, made_a_round_trip=False,found_number = -1):
+		if found_number == -1:
+			found_number = self.get_k() + 1
 		if key == "*":
 			tuples = self.get_data(key)
 			if tuples:
@@ -163,7 +173,7 @@ class Node():
 			# if ID == starting_node_ID
 			if int(str(ID)[:4]) == starting_node_ID:
 				return
-			msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, False]]
+			msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, False, -1]]
 			msg = pickle.dumps(msg, -1)
 			succ[2].send(msg)
 			return
@@ -174,6 +184,7 @@ class Node():
 					return
 				else: #That means the node is outside the replication chain, we must find the first node that has it
 					if self.get_predecessor() == None:
+						print("The key wasn't found!")
 						return
 					succ = self.get_successor()
 					[ID, address, socket] = succ
@@ -186,13 +197,14 @@ class Node():
 					print("The key wasn't found on this node, passing the query forward")
 					if self.get_predecessor() == None:
 						return
-					msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, made_a_round_trip]]
+					msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, made_a_round_trip, -1]]
 					msg = pickle.dumps(msg, -1)
 					succ[2].send(msg)
 					return
 			elif self.consistency == "linearizability":
 				if not self.check_if_in_data(key):
 					if self.get_predecessor() == None:
+						print("The key wasn't found!")
 						return
 					succ = self.get_successor()
 					if self.get_id() == starting_node_ID:
@@ -202,22 +214,33 @@ class Node():
 						else:
 							made_a_round_trip = True
 					print("The key wasn't found on this node, passing the query forward")
-					if self.get_predecessor() == None:
-						return
-					msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, made_a_round_trip]]
+					msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, made_a_round_trip, found_number]]
 					msg = pickle.dumps(msg, -1)
 					succ[2].send(msg)
 					return
 				else:
 					if self.get_data_replica_counter(key) != 1:
-						succ = self.get_successor()
-						print("The key was found on this node, but it's not the latest node, passing the query forward")
 						if self.get_predecessor() == None:
+							print("The key wasn't found!")
 							return
-						msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID]]
-						msg = pickle.dumps(msg, -1)
-						succ[2].send(msg)
-						return
+						if found_number < self.get_data_replica_counter(key):
+							print("The cycle is smaller than k, we have to go back")
+							pred = self.get_predecessor()
+							msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, made_a_round_trip ,found_number]]
+							msg = pickle.dumps(msg, -1)
+							pred[2].send(msg)
+							return
+						elif found_number == self.get_data_replica_counter(key):
+							print("Came back look what I found")
+							print(key + " => " + self.get_data(key), self.get_data_replica_counter(key))
+							return
+						else:
+							succ = self.get_successor()
+							print("The key was found on this node, but it's not the latest node, passing the query forward")
+							msg = [[self.get_id(), self.get_counter(), 8],[key, starting_node_ID, made_a_round_trip, self.get_data_replica_counter(key)]]
+							msg = pickle.dumps(msg, -1)
+							succ[2].send(msg)
+							return
 					else:
 						print(key + " => " + self.get_data(key), self.get_data_replica_counter(key))
 						return
@@ -247,11 +270,20 @@ class Node():
 					print("I,",self.get_id(),"tried to delete missing data with key",key)
 					return
 			else:
-				print("Found delete for",self.hash(key),", passing it forward")
-				msg = [[self.get_id(), self.get_counter(), 5],[key]]
-				msg = pickle.dumps(msg, -1)
-				self.get_successor()[2].send(msg)
-				return
+				# already have a replica so go backwards
+				if self.check_if_in_data(key):
+					print("Found delete for",self.hash(key),", passing it backwards")
+					msg = [[self.get_id(), self.get_counter(), 5],[key]]
+					msg = pickle.dumps(msg, -1)
+					self.get_predecessor()[2].send(msg)
+					return
+				# go forwards
+				else:
+					print("Found delete for",self.hash(key),", passing it forward")
+					msg = [[self.get_id(), self.get_counter(), 5],[key]]
+					msg = pickle.dumps(msg, -1)
+					self.get_successor()[2].send(msg)
+					return
 
 	def replica_delete(self,key,peer_ip,peer_port,peer_id,currentk):
 		if currentk != 0 and self.get_id() != peer_id:
@@ -326,11 +358,9 @@ class Node():
 		# code = 2 departed node pred
 		# code = 3 departed node succ (messaged from departed node pred)
 
-		print(peer_ip_address, peer_port, peer_id, code)
 		# second node entered
 		if self.is_bootstrap and self.get_successor() == None:
 			self.set_successor([peer_id, [peer_ip_address, peer_port], peer_socket])
-			print("1")
 			self.set_predecessor([peer_id, [peer_ip_address, peer_port], peer_socket])
 			self.add_socket(peer_socket)
 			# let second node know what's up
@@ -338,7 +368,6 @@ class Node():
 			msg = [[self.get_id(), self.get_counter(), 0], [[self.get_ip_address(), self.get_port(), self.get_id()], [self.get_ip_address(), self.get_port(), self.get_id()], [self.get_k(), self.get_consistency()]]]
 			msg = pickle.dumps(msg, -1)
 			peer_socket.send(msg)
-			print("Sent 1")
 
 		# second node leaves
 		elif self.is_bootstrap and code == 2 and self.get_successor()[0] == self.get_predecessor()[0]:
@@ -359,7 +388,7 @@ class Node():
 			if former_predecessor[0] != self.get_successor()[0]:
 				self.remove_socket(former_predecessor[2])
 				former_predecessor[2].close()
-				print("1,",self.get_id(), "closed", former_predecessor)
+				# print("1,",self.get_id(), "closed", former_predecessor)
 			self.add_socket(peer_socket)
 			self.set_predecessor([peer_id, [peer_ip_address, peer_port], peer_socket])
 			print("informed of a predecessor: ", peer_id)
@@ -369,10 +398,11 @@ class Node():
 			former_predecessor = self.get_predecessor()
 			self.remove_socket(former_predecessor[2])
 			former_predecessor[2].close()
-			print("2,",self.get_id(), "closed", former_predecessor)
-			print(peer_id,peer_socket)
+			# print("2,",self.get_id(), "closed", former_predecessor)
 			if self.get_successor()[0] != peer_id:
 				self.add_socket(peer_socket)
+			else:
+				peer_socket = self.get_successor()[2]
 			self.set_predecessor([peer_id, [peer_ip_address, peer_port], peer_socket])
 			print("informed of a predecessor: ", peer_id)
 			return
@@ -388,7 +418,7 @@ class Node():
 				self.remove_socket(former_successor[2])
 				former_successor[2].shutdown(socket.SHUT_RDWR)
 				former_successor[2].close()
-				print("3,",self.get_id(), "closed", former_successor)
+				# print("3,",self.get_id(), "closed", former_successor)
 
 			# set the new successor
 			self.add_socket(peer_socket)
@@ -398,10 +428,9 @@ class Node():
 			# print(self.get_predecessor())
 			# print(self.get_sockets())
 			msg = [[self.get_id(), self.get_counter(), 0], [[self.get_ip_address(), self.get_port(), self.get_id()], [former_successor[1][0], former_successor[1][1], former_successor[0]] , [self.get_k(), self.get_consistency()]]]
-			print("Sending to my succ 0",self.get_successor(),msg)
+			# print("Sending to my succ 0",self.get_successor(),msg)
 			msg = pickle.dumps(msg, -1)
 			self.get_successor()[2].send(msg)
-			print("Sent 2")
 			print("found_successor: ", peer_id)
 
 		elif code == 2:
@@ -420,7 +449,7 @@ class Node():
 
 				# message new successor
 				msg = [[self.get_id(), self.get_counter(), 3], [[self.get_ip_address(), self.get_port(), self.get_id()], [self.get_ip_address(), self.get_port(), self.get_id()]]]
-				print("Sending to my successor 3",self.get_successor(),msg)
+				# print("Sending to my successor 3",self.get_successor(),msg)
 				msg = pickle.dumps(msg, -1)
 				self.get_successor()[2].send(msg)
 				print("found_successor: ", peer_id)
@@ -433,12 +462,12 @@ class Node():
 				self.remove_socket(former_successor[2])
 				former_successor[2].shutdown(socket.SHUT_RDWR)
 				former_successor[2].close()
-				print("3,",self.get_id(), "closed", former_successor)
+				# print("3,",self.get_id(), "closed", former_successor)
 				self.add_socket(peer_socket)
 			self.set_successor([peer_id,[peer_ip_address, peer_port], peer_socket])
 
 			msg = [[self.get_id(), self.get_counter(), 3], [[self.get_ip_address(), self.get_port(), self.get_id()], [self.get_ip_address(), self.get_port(), self.get_id()]]]
-			print("Sending to my successor 3",self.get_successor(),msg)
+			# print("Sending to my successor 3",self.get_successor(),msg)
 			msg = pickle.dumps(msg, -1)
 			self.get_successor()[2].send(msg)
 			print("found_successor: ", peer_id)
@@ -454,12 +483,10 @@ class Node():
 		self.add_socket(pred[2])
 		# check if this is the second node to be connected
 		if self.compute_id(pred[0], pred[1]) == succ[2]:
-			print("5")
 			self.set_predecessor([self.compute_id(pred[0], pred[1]), [pred[0], pred[1]], pred[2]])
 			self.set_successor([self.compute_id(pred[0], pred[1]), [pred[0], pred[1]], pred[2]])
 
 		elif bootstrap_socket == None:
-			print("6")
 			self.set_predecessor([self.compute_id(pred[0], pred[1]), [pred[0], pred[1]], pred[2]])
 			new_successor_socket = self.create_socket(succ[0], succ[1])
 			self.set_successor([succ[2], [succ[0], succ[1]], new_successor_socket])
@@ -469,7 +496,6 @@ class Node():
 			self.get_successor()[2].send(msg)
 
 		else:
-			print("7")
 			self.set_predecessor([self.compute_id(pred[0], pred[1]), [pred[0], pred[1]], pred[2]])
 			self.set_successor([succ[2], [succ[0], succ[1]], bootstrap_socket])
 			self.add_socket(bootstrap_socket)
@@ -518,20 +544,20 @@ class Node():
 			sleep(.1)
 			self.get_successor()[2].shutdown(socket.SHUT_RDWR)
 			self.get_successor()[2].close()
-			print("4,",self.get_id(), "closed", self.get_successor())
+			# print("4,",self.get_id(), "closed", self.get_successor())
 			return
 
 		self.get_predecessor()[2].send(msg)
-		print(f"sending message to {self.get_predecessor()[2]}")
+		print(f"Sending Goodbye message to {self.get_predecessor()[2]}")
 		sleep(.1)
 		self.get_predecessor()[2].shutdown(socket.SHUT_RDWR)
 		self.get_predecessor()[2].close()
-		print("5,",self.get_id(), "closed", self.get_predecessor())
+		# print("5,",self.get_id(), "closed", self.get_predecessor())
 		self.remove_socket(self.get_predecessor()[2])
 		sleep(.1)
 		self.get_successor()[2].shutdown(socket.SHUT_RDWR)
 		self.get_successor()[2].close()
-		print("6,",self.get_id(), "closed", self.get_successor())
+		# print("6,",self.get_id(), "closed", self.get_successor())
 		self.remove_socket(self.get_successor()[2])
 
 		while (self.get_sockets()):

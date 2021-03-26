@@ -60,7 +60,6 @@ def connect_to_dht():
 				successor_id = node.compute_id(bootstrap_ip, bootstrap_port)
 				# wait until info about predecessor and successor arrives
 				[_, [_, succ, [answer_k, answer_consistency]]] = receive(client_socket)
-				print(succ, [answer_k, answer_consistency])
 				# set consistency and k
 				node.set_consistency(answer_consistency)
 				node.set_k(answer_k)
@@ -72,7 +71,6 @@ def connect_to_dht():
 				predecessor_socket, _ = node.get_sockets()[0].accept()
 				# wait until info about predecessor and successor arrives
 				[_, [pred, succ, [answer_k, answer_consistency]]] = receive(predecessor_socket)
-				print([pred, succ, [answer_k, answer_consistency]])
 				# set consistency and k
 				node.set_consistency(answer_consistency)
 				node.set_k(answer_k)
@@ -142,7 +140,6 @@ def main_loop():
 					pass
 				else:
 					pred = info
-					print(peer_id,code,pred)
 					print("just received a new connection from", peer_id, "with info", pred)
 					node.update_dht(pred[0], pred[1], peer_id, code, peer_socket)
 					print()
@@ -150,7 +147,7 @@ def main_loop():
 				continue
 			else:
 				[[peer_id, count, code], info] = receive(notified_socket)
-				print(code, info)
+				# print(code, info)
 				# check for new successor
 				if code == 0 or code == 2 or code == 3:
 					[_, succ] = info
@@ -173,8 +170,8 @@ def main_loop():
 					node.replica_delete(key, peer_ip, peer_port, peer_id, currentk)
 				#query code
 				elif code == 8:
-					[key, starting_node_ID, round_trip] = info
-					node.query(key, starting_node_ID, made_a_round_trip = round_trip)
+					[key, starting_node_ID, round_trip, found_number] = info
+					node.query(key, starting_node_ID, round_trip, found_number)
 				#update data on predecessor departing:
 				elif code == 9:
 					[sent_data, send_key, departing_node_id] = info
