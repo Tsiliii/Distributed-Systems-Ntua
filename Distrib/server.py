@@ -212,6 +212,7 @@ def get_data():
 
 def main_loop():
 
+	Begin = False
 	filename = "insert_" + str(int(port % 9910 / 2)) + ".txt"
 	print(filename)
 	file = open(filename)
@@ -242,7 +243,7 @@ def main_loop():
 	# request_lines.reverse()
 	# file.close()
 
-	insert_time_start = time.mktime(time.struct_time((2021,3,26,18,28,00,4,85,0)))
+	insert_time_start = time.mktime(time.struct_time((2021,3,26,19,12,00,4,85,0)))
 	# query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
 	# request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
 	sleep(2)
@@ -250,6 +251,10 @@ def main_loop():
 		# sleep(.5)
 		# iterate over all sockets, choose those that have been activated, set time interval to 0 for non-blocking
 		read_sockets, _, exception_sockets = select.select(node.get_sockets(), [], node.get_sockets(), 0)
+
+		if Begin == False:
+			Begin = True
+			node.set_start()
 
 		# iterate over notified ones
 		for notified_socket in read_sockets:
@@ -412,6 +417,10 @@ The basic functionalities of the ToyChord CLI include the following:
 	this CLI. Example usage:
 	help
 """)
+			elif str(value).lower().startswith("time"):
+				print("Started",node.start_time)
+				print("Finished", node.end_time)
+				print("Difference in seconds", node.end_time - node.start_time)
 			else:
 				print("You entered: ",value,", did you make a mistake?")
 			print()

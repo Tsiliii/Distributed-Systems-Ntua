@@ -100,6 +100,7 @@ def receive(socket):
 
 def main_loop(node):
 
+	Begin = False
 	file = open("insert_0.txt")
 	insert_lines = file.readlines()
 	for i in range(len(insert_lines)):
@@ -126,7 +127,7 @@ def main_loop(node):
 	# request_lines.reverse()
 	# file.close()
 
-	insert_time_start = time.mktime(time.struct_time((2021,3,26,18,28,00,4,85,0)))
+	insert_time_start = time.mktime(time.struct_time((2021,3,26,19,12,00,4,85,0)))
 	# query_time_start = time.mktime(time.struct_time((2021,3,26,4,55,00,4,85,0)))
 	# request_time_start = time.mktime(time.struct_time((2021,3,26,5,06,00,4,85,0)))
 	sleep(2.1)
@@ -224,7 +225,6 @@ def main_loop(node):
 
 		#Expirements
 		# if time == smth:
-		# 	node.set_start()
 		# pops
 		# if its last item so something interesting
 		# i.e. track its counter.
@@ -361,11 +361,16 @@ The basic functionalities of the ToyChord CLI include the following:
 			elif str(value).lower().startswith("time"):
 				print("Started",node.start_time)
 				print("Finished", node.end_time)
+				print("Difference in seconds", node.end_time - node.start_time)
 			else:
 				print("You entered:",value,", did you make a mistake?")
 			print()
 
 		# insert_lines = []
+
+		if Begin == False:
+			Begin = True
+			node.set_start()
 
 		# # check all sockkets to be closed if other closed them close them aswell
 		if time.time() >= insert_time_start:
